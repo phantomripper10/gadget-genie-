@@ -1,0 +1,13 @@
+{
+  "name": "gadget-genie",
+  "version": "1.0.0",
+  "description": "AI engineering mentor for kids — 3D previews, blueprints, STL files, code, parts lists and STEM lessons for any gadget a kid can imagine.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

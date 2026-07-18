@@ -1,0 +1,4 @@
+# NEVER commit API keys
+.env
+
+node_modules/
