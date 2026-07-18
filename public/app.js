@@ -117,7 +117,7 @@ let gateSolution = 0;
 
 function refreshParentUI() {
   const btn = document.getElementById("parentBtn");
-  btn.textContent = parentMode ? "🛡️ Parent Mode: ON" : "🛡️ Parent Mode";
+  btn.innerHTML = parentMode ? '🛡️<span class="btn-label"> Parent Mode: ON</span>✓' : '🛡️<span class="btn-label"> Parent Mode</span>';
   btn.classList.toggle("parent-on", parentMode);
   renderGallery();
   if (currentGadget && !document.getElementById("workshop").classList.contains("hidden")) {
@@ -319,10 +319,10 @@ function renderTab(tab) {
     }).join("");
     const total = (g.parts || []).reduce((s, p) => s + (Number(p.cost) || 0), 0);
     const freeCount = (g.parts || []).filter((p) => !Number(p.cost)).length;
-    el.innerHTML = `<table class="parts">
+    el.innerHTML = `<div class="table-wrap"><table class="parts">
         <thead><tr><th>Item</th><th>Qty</th><th>Est. cost</th><th>Buy</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>
+      </table></div>
       <div class="parts-total">Total: ~$${total.toFixed(2)}
         ${freeCount ? `<div class="free">♻️ ${freeCount} part${freeCount > 1 ? "s" : ""} free from recycling!</div>` : ""}
       </div>`;

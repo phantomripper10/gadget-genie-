@@ -373,3 +373,42 @@ pre.code {
 .safety-card li { font-size: 0.9rem; color: #7a2e30; padding: 3px 0; }
 
 footer { text-align: center; padding: 30px; color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+
+.btn-home { border-color: var(--green); color: var(--green-dark); }
+.workshop-footer { text-align: center; padding: 8px 0 20px; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table.parts { min-width: 430px; }
+
+/* ---------------- mobile ---------------- */
+@media (max-width: 640px) {
+  .topbar { padding: 10px 12px; gap: 6px; }
+  .logo { font-size: 1.15rem; }
+  .topbar-right { gap: 6px; }
+  .topbar-right .btn { padding: 8px 10px; font-size: 0.85rem; }
+  .btn-label { display: none; }           /* icon-only 🛡️ / 🏠 buttons */
+  .ai-pill { font-size: 0.65rem; padding: 3px 8px; white-space: nowrap; }
+
+  #landing { padding: 26px 14px 50px; }
+  .hero-badge { font-size: 0.62rem; letter-spacing: 1px; padding: 5px 12px; }
+  .hero-sub { font-size: 1rem; }
+  .prompt-box { padding: 8px; gap: 6px; }
+  .prompt-box input { font-size: 16px; padding: 6px 8px; min-width: 0; } /* 16px stops iOS zoom-on-focus */
+  .prompt-box .btn { padding: 10px 12px; font-size: 0.88rem; white-space: nowrap; }
+
+  .fgroup { flex-wrap: wrap; justify-content: center; border-radius: 18px; }
+  .filter-bar { gap: 10px; }
+  .hstep { width: 100%; }
+
+  #workshop { padding: 12px 10px 40px; }
+  .card { padding: 14px; }
+  .gadget-emoji { width: 60px; height: 60px; font-size: 2.2rem; border-radius: 14px; }
+  .gadget-title h2 { font-size: 1.35rem; }
+  .gadget-actions { width: 100%; }
+  .gadget-actions .btn { flex: 1 1 auto; padding: 9px 10px; font-size: 0.85rem; }
+  #viewer3d { height: 290px; }
+  .tab { padding: 7px 10px; font-size: 0.82rem; }
+  .mentor-input input { font-size: 16px; }
+  .gate-row input { font-size: 16px; }
+  .stores .btn { flex: 1 1 100%; }
+  table.parts { font-size: 0.84rem; }
+}

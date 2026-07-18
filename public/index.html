@@ -15,8 +15,8 @@
     <div class="logo" onclick="goHome()">⚡ Gadget<span>Genie</span></div>
     <div class="topbar-right">
       <span id="aiStatus" class="ai-pill">…</span>
-      <button id="parentBtn" class="btn btn-ghost" onclick="openParentModal()">🛡️ Parent Mode</button>
-      <button class="btn btn-ghost" onclick="goHome()">+ New Invention</button>
+      <button id="parentBtn" class="btn btn-ghost" onclick="openParentModal()">🛡️<span class="btn-label"> Parent Mode</span></button>
+      <button class="btn btn-home" onclick="goHome()">🏠<span class="btn-label"> Home</span></button>
     </div>
   </header>
 
@@ -165,6 +165,7 @@
         <button class="btn btn-primary" onclick="downloadSTL()">⬇ STL File</button>
         <button class="btn" onclick="downloadCode()">⬇ Code</button>
         <button class="btn" onclick="downloadOfflineGuide()">📴 Offline Guide</button>
+        <button class="btn" onclick="goHome()">🏠 Home</button>
       </div>
     </div>
 
@@ -241,6 +242,10 @@
           <div id="supervision"></div>
         </div>
       </div>
+    </div>
+
+    <div class="workshop-footer">
+      <button class="btn btn-primary" onclick="goHome()">🏠 Back to Home</button>
     </div>
   </section>
 
