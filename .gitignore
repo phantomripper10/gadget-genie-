@@ -1,4 +1,7 @@
 # NEVER commit API keys
 .env
 
+# user account data stays local
+data.json
+
 node_modules/

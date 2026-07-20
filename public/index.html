@@ -30,7 +30,8 @@
       <button id="parentBtn" class="btn btn-ghost" onclick="openParentModal()">
         <span class="i" data-icon="shield"></span>Parent mode</button>
       <button id="planBtn" class="btn btn-primary" onclick="openPricing()">Upgrade</button>
-      <button class="btn btn-secondary" onclick="goHome()">New invention</button>
+      <button id="buildsBtn" class="btn btn-secondary hidden" onclick="openBuilds()">My builds</button>
+      <button id="authBtn" class="btn btn-secondary" onclick="openAuth()">Sign in</button>
     </nav>
   </header>
 
@@ -309,6 +310,50 @@
       </div>
       <p class="pricing-fineprint">No card needed for the trial. Cancel anytime. Kids: ask a parent before any purchase.</p>
       <button class="modal-close" onclick="closePricing()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- ============================== AUTH MODAL ============================== -->
+  <div id="authModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal">
+      <h3 id="authTitle"><span class="i" data-icon="robot"></span><span id="authHeading">Create your account</span></h3>
+      <p class="auth-sub">Save every build, keep your plan, and pick up where you left off — on any computer.</p>
+      <div class="auth-switch">
+        <button id="authTabSignup" class="fchip active" onclick="setAuthMode('signup')">Create account</button>
+        <button id="authTabLogin" class="fchip" onclick="setAuthMode('login')">Sign in</button>
+      </div>
+      <form id="authForm" onsubmit="submitAuth(event)">
+        <label class="field" id="nameField">
+          <span>Name or nickname</span>
+          <input id="authName" type="text" autocomplete="nickname" maxlength="60" placeholder="Ada" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="authPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="At least 6 characters" />
+        </label>
+        <p id="authError" class="gate-error hidden"></p>
+        <button id="authSubmit" class="btn btn-primary auth-submit" type="submit">Create account</button>
+      </form>
+      <p class="pricing-fineprint">Under 13? Ask a parent before creating an account.</p>
+      <button class="modal-close" onclick="closeAuth()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- ============================== MY BUILDS MODAL ============================== -->
+  <div id="buildsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="buildsTitle">
+    <div class="modal modal-wide">
+      <h3 id="buildsTitle"><span class="i" data-icon="cube"></span>My builds</h3>
+      <p class="auth-sub">Everything you've designed or opened, saved to your account.</p>
+      <div id="buildsList" class="builds-list"></div>
+      <div class="builds-foot">
+        <span id="buildsUser" class="hint"></span>
+        <button class="btn btn-ghost" onclick="signOut()">Sign out</button>
+      </div>
+      <button class="modal-close" onclick="closeBuilds()" aria-label="Close">✕</button>
     </div>
   </div>
 

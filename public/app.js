@@ -7,6 +7,152 @@ let filterDiff = "any";  // any | Beginner | Intermediate | Advanced
 let filterMat = "any";   // any | cardboard | plastic | wood | metal | electronics
 let parentMode = localStorage.getItem("gg_parent") === "1";
 
+// ---------------------------------------------------------------- accounts
+let authToken = localStorage.getItem("gg_token") || "";
+let currentUser = null; // { name, email, plan, buildCount }
+let authMode = "signup";
+
+async function api(route, body) {
+  const res = await fetch(route, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, token: authToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+function updateAuthUI() {
+  const authBtn = document.getElementById("authBtn");
+  const buildsBtn = document.getElementById("buildsBtn");
+  if (currentUser) {
+    authBtn.classList.add("hidden");
+    buildsBtn.classList.remove("hidden");
+    buildsBtn.textContent = `My builds (${currentUser.buildCount})`;
+  } else {
+    authBtn.classList.remove("hidden");
+    buildsBtn.classList.add("hidden");
+  }
+  updatePlanUI();
+}
+
+async function restoreSession() {
+  if (!authToken) return;
+  try {
+    const data = await api("/api/me", {});
+    currentUser = data.user;
+  } catch {
+    authToken = "";
+    localStorage.removeItem("gg_token");
+  }
+  updateAuthUI();
+}
+
+function openAuth() {
+  setAuthMode("signup");
+  document.getElementById("authError").classList.add("hidden");
+  document.getElementById("authModal").classList.remove("hidden");
+  document.getElementById(authMode === "signup" ? "authName" : "authEmail").focus();
+}
+function closeAuth() { document.getElementById("authModal").classList.add("hidden"); }
+
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById("authTabSignup").classList.toggle("active", mode === "signup");
+  document.getElementById("authTabLogin").classList.toggle("active", mode === "login");
+  document.getElementById("nameField").classList.toggle("hidden", mode === "login");
+  document.getElementById("authHeading").textContent = mode === "signup" ? "Create your account" : "Welcome back";
+  document.getElementById("authSubmit").textContent = mode === "signup" ? "Create account" : "Sign in";
+  document.getElementById("authError").classList.add("hidden");
+}
+
+async function submitAuth(e) {
+  e.preventDefault();
+  const btn = document.getElementById("authSubmit");
+  const err = document.getElementById("authError");
+  err.classList.add("hidden");
+  btn.classList.add("is-loading");
+  try {
+    const data = await api(authMode === "signup" ? "/api/signup" : "/api/login", {
+      name: document.getElementById("authName").value,
+      email: document.getElementById("authEmail").value,
+      password: document.getElementById("authPassword").value,
+    });
+    authToken = data.token;
+    localStorage.setItem("gg_token", authToken);
+    currentUser = data.user;
+    document.getElementById("authPassword").value = "";
+    closeAuth();
+    updateAuthUI();
+    // a plan chosen before signing up carries over to the account
+    const local = getPlan();
+    if (local.tier !== "free" && currentUser.plan.tier === "free") {
+      try { currentUser = (await api("/api/plan", { tier: local.tier, until: local.until })).user; updateAuthUI(); } catch {}
+    }
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.classList.remove("hidden");
+  } finally {
+    btn.classList.remove("is-loading");
+  }
+}
+
+async function signOut() {
+  try { await api("/api/logout", {}); } catch {}
+  authToken = "";
+  localStorage.removeItem("gg_token");
+  currentUser = null;
+  closeBuilds();
+  updateAuthUI();
+}
+
+// ---------------------------------------------------------------- my builds
+
+async function saveBuildToAccount(g) {
+  if (!currentUser || !g) return;
+  try {
+    const data = await api("/api/builds/save", { gadget: g });
+    currentUser.buildCount = data.buildCount;
+    updateAuthUI();
+  } catch {}
+}
+
+async function openBuilds() {
+  const list = document.getElementById("buildsList");
+  list.innerHTML = `<div class="builds-empty">Loading…</div>`;
+  document.getElementById("buildsUser").textContent = currentUser ? `Signed in as ${currentUser.name} · ${currentUser.email}` : "";
+  document.getElementById("buildsModal").classList.remove("hidden");
+  try {
+    const data = await api("/api/builds/list", {});
+    if (!data.builds.length) {
+      list.innerHTML = `<div class="builds-empty">No builds yet. Open a project or design something new — it saves here automatically.</div>`;
+      return;
+    }
+    list.innerHTML = data.builds.map((b) => `
+      <button class="build-row" onclick="openSavedBuild('${escapeHtml(b.id)}')">
+        <div class="build-art">${GADGET_ART[b.id] || GADGET_ART.default}</div>
+        <div class="build-meta">
+          <b>${escapeHtml(b.name)}</b>
+          <span>${escapeHtml(b.difficulty || "")} · ~$${(b.cost || 0).toFixed(2)} · saved ${new Date(b.savedAt).toLocaleDateString()}</span>
+        </div>
+        <span class="build-open">Open</span>
+      </button>`).join("");
+  } catch (ex) {
+    list.innerHTML = `<div class="builds-empty">${escapeHtml(ex.message)}</div>`;
+  }
+}
+function closeBuilds() { document.getElementById("buildsModal").classList.add("hidden"); }
+
+async function openSavedBuild(id) {
+  try {
+    const data = await api("/api/builds/get", { id });
+    closeBuilds();
+    currentGadget = data.gadget;
+    renderGadget(data.gadget, false, "");
+  } catch (ex) { alert(ex.message); }
+}
+
 // ---------------------------------------------------------------- plans & monetization
 // To turn on REAL payments: create Stripe Payment Links (a parent's Stripe account)
 // and paste them here. Until then, upgrade buttons start a free 7-day trial.
@@ -16,6 +162,11 @@ const FREE_LIMITS = { aiDesigns: 3, genieQuestions: 10 };
 const PLAN_NAMES = { free: "Free", premium: "Premium", mx: "MX" };
 
 function getPlan() {
+  if (currentUser) { // signed in: the account's plan is the truth
+    const p = currentUser.plan || { tier: "free" };
+    if (p.tier !== "free" && p.until && Date.now() > p.until) return { tier: "free" };
+    return p;
+  }
   try {
     const p = JSON.parse(localStorage.getItem("gg_plan") || "null");
     if (p && p.tier !== "free" && p.until && Date.now() > p.until) return { tier: "free" }; // trial expired
@@ -56,22 +207,25 @@ function openPricing(reason) {
 }
 function closePricing() { document.getElementById("pricingModal").classList.add("hidden"); }
 
-function choosePlan(tier) {
-  if (tier === "free") {
-    localStorage.removeItem("gg_plan");
-    updatePlanUI();
-    closePricing();
-    return;
-  }
-  if (STRIPE_LINKS[tier]) {
+async function choosePlan(tier) {
+  if (tier !== "free" && STRIPE_LINKS[tier]) {
     window.open(STRIPE_LINKS[tier], "_blank", "noopener"); // real checkout
     return;
   }
-  // payments not connected yet — start a card-free trial so the feature set works
-  localStorage.setItem("gg_plan", JSON.stringify({ tier, until: Date.now() + TRIAL_DAYS * 864e5 }));
+  if (currentUser) {
+    try {
+      currentUser = (await api("/api/plan", { tier })).user; // stored on the account
+    } catch (ex) { alert(ex.message); return; }
+  } else if (tier === "free") {
+    localStorage.removeItem("gg_plan");
+  } else {
+    localStorage.setItem("gg_plan", JSON.stringify({ tier, until: Date.now() + TRIAL_DAYS * 864e5 }));
+  }
   updatePlanUI();
   closePricing();
-  alert(`${PLAN_NAMES[tier]} trial started — free for ${TRIAL_DAYS} days, no card needed.\n(Real checkout opens here once Stripe links are added.)`);
+  if (tier !== "free") {
+    alert(`${PLAN_NAMES[tier]} trial started — free for ${TRIAL_DAYS} days, no card needed.${currentUser ? "\nSaved to your account — it works on any computer you sign in to." : ""}\n(Real checkout opens here once Stripe links are added.)`);
+  }
 }
 
 // ---------------------------------------------------------------- boot
@@ -347,6 +501,7 @@ function renderGadget(g, demo, demoExtra) {
 
   buildViewer(document.getElementById("viewer3d"), g);
   document.getElementById("blueprint").innerHTML = generateBlueprintSVG(g);
+  saveBuildToAccount(g); // signed-in users build a history automatically
 
   document.getElementById("sustainability").innerHTML = (g.sustainability || [])
     .map((s) => `<div class="sust">
@@ -581,6 +736,7 @@ document.getElementById("gateAnswer").addEventListener("keydown", (e) => {
 });
 refreshParentUI(); // initial gallery paint + parent state
 updatePlanUI();
+restoreSession();
 
 function onPhotoPicked(e) {
   const file = e.target.files[0];

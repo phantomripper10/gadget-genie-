@@ -5,6 +5,9 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const net = require("net");
+const tls = require("tls");
+const crypto = require("crypto");
 
 // Load .env (KEY=VALUE lines) so API keys stay out of the source code.
 try {
@@ -34,6 +37,198 @@ const MIME = {
   ".png": "image/png",
   ".ico": "image/x-icon",
 };
+
+// ============================================================================
+// User accounts + saved builds
+// Storage: one JSON blob. Held in memory, persisted to (a) a Redis-compatible
+// store when REDIS_URL is set (Render Key Value — survives free-tier restarts),
+// and (b) a local data.json file (works forever on a normal machine).
+// ============================================================================
+
+const DATA_FILE = path.join(__dirname, "data.json");
+const REDIS_URL = process.env.REDIS_URL || "";
+const DB_KEY = "gadgetgenie:db";
+
+let db = { users: {}, sessions: {} };
+
+// ---------- minimal Redis (RESP) client — just AUTH/GET/SET, promise-queued ----------
+const redis = REDIS_URL ? (() => {
+  const u = new URL(REDIS_URL);
+  let sock = null, buf = Buffer.alloc(0), queue = [];
+  function connect() {
+    return new Promise((resolve, reject) => {
+      const opts = { host: u.hostname, port: Number(u.port) || 6379 };
+      sock = u.protocol === "rediss:" ? tls.connect({ ...opts, servername: u.hostname }, onUp) : net.connect(opts, onUp);
+      function onUp() { resolve(); }
+      sock.on("data", (d) => {
+        buf = Buffer.concat([buf, d]);
+        let parsed;
+        while (queue.length && (parsed = tryParse()) !== undefined) {
+          const { resolve: rs, reject: rj } = queue.shift();
+          parsed instanceof Error ? rj(parsed) : rs(parsed);
+        }
+      });
+      sock.on("error", (e) => { queue.forEach((q) => q.reject(e)); queue = []; sock = null; reject(e); });
+      sock.on("close", () => { sock = null; });
+    });
+  }
+  function tryParse() {
+    if (!buf.length) return undefined;
+    const nl = buf.indexOf("\r\n");
+    if (nl < 0) return undefined;
+    const head = buf.slice(0, nl).toString();
+    const type = head[0], rest = head.slice(1);
+    if (type === "+" || type === ":") { buf = buf.slice(nl + 2); return rest; }
+    if (type === "-") { buf = buf.slice(nl + 2); return new Error(rest); }
+    if (type === "$") {
+      const len = Number(rest);
+      if (len === -1) { buf = buf.slice(nl + 2); return null; }
+      if (buf.length < nl + 2 + len + 2) return undefined;
+      const val = buf.slice(nl + 2, nl + 2 + len).toString();
+      buf = buf.slice(nl + 2 + len + 2);
+      return val;
+    }
+    return new Error("unsupported RESP type " + type);
+  }
+  async function cmd(...args) {
+    if (!sock) {
+      await connect();
+      if (u.password) await cmd("AUTH", ...(u.username ? [u.username, u.password] : [u.password]));
+    }
+    const payload = `*${args.length}\r\n` + args.map((a) => `$${Buffer.byteLength(String(a))}\r\n${a}\r\n`).join("");
+    return new Promise((resolve, reject) => { queue.push({ resolve, reject }); sock.write(payload); });
+  }
+  return { cmd };
+})() : null;
+
+async function loadDB() {
+  if (redis) {
+    try {
+      const raw = await redis.cmd("GET", DB_KEY);
+      if (raw) { db = JSON.parse(raw); console.log(`Accounts: loaded ${Object.keys(db.users).length} users from Redis`); return; }
+      console.log("Accounts: Redis connected (empty — fresh database)");
+      return;
+    } catch (e) { console.error("Accounts: Redis load failed:", e.message); }
+  }
+  try { db = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")); console.log(`Accounts: loaded ${Object.keys(db.users).length} users from data.json`); }
+  catch { console.log("Accounts: starting with empty local database"); }
+}
+
+let saveTimer = null;
+function saveDB() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const raw = JSON.stringify(db);
+    try { fs.writeFileSync(DATA_FILE, raw); } catch {}
+    if (redis) { try { await redis.cmd("SET", DB_KEY, raw); } catch (e) { console.error("Accounts: Redis save failed:", e.message); } }
+  }, 250);
+}
+
+// ---------- auth helpers ----------
+function hashPassword(password, salt) {
+  return crypto.scryptSync(password, salt, 64).toString("hex");
+}
+function newToken() { return crypto.randomBytes(24).toString("hex"); }
+function cleanSessions() {
+  const now = Date.now();
+  for (const t of Object.keys(db.sessions)) if (db.sessions[t].expires < now) delete db.sessions[t];
+}
+function userFromToken(token) {
+  if (!token) return null;
+  const s = db.sessions[token];
+  if (!s || s.expires < Date.now()) return null;
+  return db.users[s.email] || null;
+}
+function publicUser(u) {
+  return { name: u.name, email: u.email, plan: u.plan || { tier: "free" }, buildCount: (u.builds || []).length };
+}
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function handleAccounts(route, payload) {
+  cleanSessions();
+
+  if (route === "/api/signup") {
+    const name = String(payload.name || "").trim().slice(0, 60);
+    const email = String(payload.email || "").trim().toLowerCase();
+    const password = String(payload.password || "");
+    if (!name) return [400, { error: "Please tell us your name (or a nickname!)." }];
+    if (!EMAIL_RE.test(email)) return [400, { error: "That email doesn't look right — check for typos." }];
+    if (password.length < 6) return [400, { error: "Password needs at least 6 characters." }];
+    if (db.users[email]) return [409, { error: "That email already has an account. Try signing in instead." }];
+    const salt = crypto.randomBytes(16).toString("hex");
+    db.users[email] = {
+      name, email, salt, passHash: hashPassword(password, salt),
+      plan: { tier: "free" }, builds: [], createdAt: Date.now(),
+    };
+    const token = newToken();
+    db.sessions[token] = { email, expires: Date.now() + 30 * 864e5 };
+    saveDB();
+    return [200, { token, user: publicUser(db.users[email]) }];
+  }
+
+  if (route === "/api/login") {
+    const email = String(payload.email || "").trim().toLowerCase();
+    const u = db.users[email];
+    if (!u || hashPassword(String(payload.password || ""), u.salt) !== u.passHash)
+      return [401, { error: "Wrong email or password." }];
+    const token = newToken();
+    db.sessions[token] = { email, expires: Date.now() + 30 * 864e5 };
+    saveDB();
+    return [200, { token, user: publicUser(u) }];
+  }
+
+  if (route === "/api/logout") {
+    delete db.sessions[payload.token];
+    saveDB();
+    return [200, { ok: true }];
+  }
+
+  const u = userFromToken(payload.token);
+
+  if (route === "/api/me") {
+    if (!u) return [401, { error: "Not signed in." }];
+    return [200, { user: publicUser(u) }];
+  }
+
+  if (route === "/api/plan") {
+    if (!u) return [401, { error: "Sign in to change your plan." }];
+    const tier = ["free", "premium", "mx"].includes(payload.tier) ? payload.tier : "free";
+    u.plan = tier === "free" ? { tier: "free" } : { tier, until: payload.until || Date.now() + 7 * 864e5 };
+    saveDB();
+    return [200, { user: publicUser(u) }];
+  }
+
+  if (route === "/api/builds/save") {
+    if (!u) return [401, { error: "Sign in to save builds." }];
+    const g = payload.gadget;
+    if (!g || !g.name || !g.id) return [400, { error: "No gadget to save." }];
+    u.builds = (u.builds || []).filter((b) => b.gadget.id !== g.id); // newest version wins
+    u.builds.unshift({ savedAt: Date.now(), gadget: g });
+    if (u.builds.length > 30) u.builds.length = 30; // cap per user
+    saveDB();
+    return [200, { ok: true, buildCount: u.builds.length }];
+  }
+
+  if (route === "/api/builds/list") {
+    if (!u) return [401, { error: "Sign in to see your builds." }];
+    return [200, {
+      builds: (u.builds || []).map((b) => ({
+        id: b.gadget.id, name: b.gadget.name, savedAt: b.savedAt,
+        difficulty: b.gadget.difficulty,
+        cost: (b.gadget.parts || []).reduce((s, p) => s + (Number(p.cost) || 0), 0),
+      })),
+    }];
+  }
+
+  if (route === "/api/builds/get") {
+    if (!u) return [401, { error: "Sign in first." }];
+    const b = (u.builds || []).find((x) => x.gadget.id === payload.id);
+    if (!b) return [404, { error: "Build not found." }];
+    return [200, { gadget: b.gadget }];
+  }
+
+  return null; // not an accounts route
+}
 
 // ---------- Gemini helpers ----------
 
@@ -151,8 +346,11 @@ async function aiText(userText, imageBase64, mimeType) {
 
 async function handleApi(req, res, route, payload) {
   if (route === "/api/status") {
-    return send(res, 200, { ai: !!AI_PROVIDER, model: AI_MODEL_NAME });
+    return send(res, 200, { ai: !!AI_PROVIDER, model: AI_MODEL_NAME, accounts: true, persistent: !!redis });
   }
+
+  const account = handleAccounts(route, payload);
+  if (account) return send(res, account[0], account[1]);
 
   if (route === "/api/generate") {
     if (!AI_PROVIDER) return send(res, 200, { demo: true });
@@ -230,7 +428,10 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`GadgetGenie running at http://localhost:${PORT}`);
-  console.log(AI_PROVIDER ? `AI mode: ${AI_PROVIDER} (${AI_MODEL_NAME})` : "Demo mode: no AI key set — using built-in gadget library (add AZURE_OPENAI_URL/KEY or GEMINI_API_KEY to .env)");
+loadDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`GadgetGenie running at http://localhost:${PORT}`);
+    console.log(AI_PROVIDER ? `AI mode: ${AI_PROVIDER} (${AI_MODEL_NAME})` : "Demo mode: no AI key set — using built-in gadget library (add AZURE_OPENAI_URL/KEY or GEMINI_API_KEY to .env)");
+    console.log(redis ? "Accounts: persistent (Redis)" : "Accounts: local file storage (data.json)");
+  });
 });
