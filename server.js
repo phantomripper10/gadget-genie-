@@ -513,7 +513,12 @@ const server = http.createServer((req, res) => {
   if (!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end(); }
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); return res.end("Not found"); }
-    res.writeHead(200, { "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream" });
+    res.writeHead(200, {
+      "Content-Type": MIME[path.extname(filePath)] || "application/octet-stream",
+      // no-cache: the browser revalidates every load, so HTML and JS can never
+      // get out of sync across deploys (stale-mix = boot crash = "empty site")
+      "Cache-Control": "no-cache",
+    });
     res.end(data);
   });
 });

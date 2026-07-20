@@ -50,20 +50,38 @@ const ICONS = {
   play: svg24(`<circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/>`),
 };
 
-// The Genie mascot — GadgetGenie's friendly robot-genie character.
-const GENIE_MASCOT = `<svg viewBox="0 0 96 96" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <path d="M48 84c-9 0-14-3-14-3s2-7 6-9" stroke="var(--blue)" fill="none"/>
-  <path d="M34 81c-4 1-8-1-8-4 0-2 2-3 4-3" stroke="var(--blue)"/>
-  <rect x="30" y="30" width="36" height="30" rx="12" fill="var(--surface)"/>
-  <path d="M48 30v-8" />
-  <circle cx="48" cy="18" r="3.5" fill="var(--yellowspark, #F4B840)" stroke="var(--ink)"/>
-  <circle cx="41" cy="43" r="3" fill="var(--ink)" stroke="none"/>
-  <circle cx="55" cy="43" r="3" fill="var(--ink)" stroke="none"/>
-  <path d="M41 51c2 2.5 5 3.5 7 3.5s5-1 7-3.5" />
-  <path d="M30 42h-6M66 42h6" stroke="var(--blue)"/>
-  <path d="M40 66c0 5 3 8 8 8s8-3 8-8" fill="var(--blue)" stroke="var(--ink)"/>
-  <path d="M40 60v6M56 60v6" />
-  <path d="M70 74l2.2 4.8L77 81l-4.8 2.2L70 88l-2.2-4.8L63 81l4.8-2.2z" fill="var(--yellowspark, #F4B840)" stroke="var(--ink)" stroke-width="2"/>
+// The Genie mascot — GadgetGenie's robot-genie character (drawn from the brand
+// reference: white helmet, navy face screen, glowing happy eyes, leaf antenna,
+// blue ear pods, and a blue-to-green genie swirl instead of legs).
+const GENIE_MASCOT = `<svg viewBox="0 0 120 150" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="gnSwirl" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#2E86E0"/><stop offset="0.55" stop-color="#2AA5A0"/><stop offset="1" stop-color="#3FAE5A"/>
+    </linearGradient>
+    <linearGradient id="gnPod" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E86E0"/><stop offset="1" stop-color="#1266C2"/>
+    </linearGradient>
+  </defs>
+  <!-- genie swirl tail -->
+  <path d="M60 108c14 4 22 9 14 16-6 5-22 4-26 10 8 1 22 0 28-6 8-8-2-15-10-18z" fill="url(#gnSwirl)"/>
+  <path d="M60 106c-12 4-18 9-11 14 5 4 16 3 18 8-7 1-19 0-24-5-7-7 6-14 12-16z" fill="url(#gnSwirl)" opacity="0.85"/>
+  <!-- leaf antenna -->
+  <path d="M60 22V12" stroke="#1F3A57" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="60" cy="10" r="5" fill="#1F3A57"/>
+  <path d="M64 9c4-8 14-10 20-8-1 8-8 14-17 12-2-.5-3-2-3-4z" fill="#3FAE5A"/>
+  <path d="M66 8c5-4 11-5 15-5" stroke="#DFF3E4" stroke-width="2" stroke-linecap="round"/>
+  <!-- ear pods -->
+  <rect x="8" y="52" width="12" height="26" rx="6" fill="url(#gnPod)"/>
+  <rect x="100" y="52" width="12" height="26" rx="6" fill="url(#gnPod)"/>
+  <!-- helmet -->
+  <rect x="16" y="22" width="88" height="84" rx="34" fill="#FFFFFF" stroke="#1F3A57" stroke-width="3.5"/>
+  <path d="M46 24a44 30 0 0128 0c-3 4-8 6-14 6s-11-2-14-6z" fill="#2E86E0" opacity="0.9"/>
+  <!-- face screen -->
+  <rect x="27" y="38" width="66" height="56" rx="20" fill="#152A43"/>
+  <!-- glowing happy eyes ^ ^ and smile -->
+  <path d="M40 62c2.5-5 8.5-5 11 0" stroke="#54E0F0" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <path d="M69 62c2.5-5 8.5-5 11 0" stroke="#54E0F0" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <path d="M50 74c3 5 8 7 10 7s7-2 10-7" stroke="#54E0F0" stroke-width="4.5" stroke-linecap="round" fill="none"/>
 </svg>`;
 
 // Injects icons into <span class="i" data-icon="name"> placeholders.

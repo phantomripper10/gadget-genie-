@@ -657,6 +657,45 @@ tr.part-done .sust-alt, tr.part-done .cost { color: var(--muted); }
 .ad-copy { flex: 1; font-size: 13px; color: var(--muted); min-width: 200px; }
 .ad-copy b { color: var(--ink); }
 
+/* ---------------------------------------------------------------- genie avatar */
+.hero-mascot { width: 120px; margin: 0 auto 8px; animation: bob 3.2s ease-in-out infinite; }
+.hero-mascot svg { width: 100%; height: auto; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+.genie-fab { position: fixed; right: 24px; bottom: 24px; z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.genie-avatar {
+  width: 76px; height: 76px; border-radius: 50%; cursor: pointer;
+  background: var(--surface); border: 2px solid var(--line); box-shadow: var(--shadow);
+  padding: 8px 8px 2px; overflow: hidden;
+  animation: bob 3.2s ease-in-out infinite;
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+.genie-avatar:hover { transform: scale(1.06); border-color: var(--blue); }
+.genie-avatar svg { width: 100%; height: auto; }
+.genie-bubble {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px 16px 4px 16px;
+  box-shadow: var(--shadow); padding: 16px; width: min(280px, 78vw);
+}
+.genie-bubble p { font-size: 13.5px; line-height: 1.5; margin-bottom: 8px; }
+.genie-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden; }
+.confetti i {
+  position: absolute; top: -12px; width: 10px; height: 14px; border-radius: 2px;
+  animation: confetti-fall 1.9s ease-in forwards;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(540deg); opacity: 0.9; }
+}
+
+/* colorful project tiles — kid-friendly, still on-system */
+.gcard:nth-child(3n+2) .gcard-art { background: var(--green-50); }
+.gcard:nth-child(3n) .gcard-art { background: #FBF1DC; }
+:root[data-theme="dark"] .gcard:nth-child(3n) .gcard-art { background: #332B1A; }
+
+@media (max-width: 720px) { .genie-fab { right: 12px; bottom: 12px; } .genie-avatar { width: 64px; height: 64px; } }
+
 /* ---------------------------------------------------------------- footer */
 footer { border-top: 1px solid var(--line); margin-top: 32px; }
 .footer-inner {

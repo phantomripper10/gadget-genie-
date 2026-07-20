@@ -42,6 +42,7 @@
   <!-- ============================== LANDING ============================== -->
   <section id="landing">
     <div class="hero">
+      <div class="hero-mascot" id="heroMascot" aria-hidden="true"></div>
       <p class="eyebrow">The future of AI begins with the youth</p>
       <h1>Turn any idea into a<br />buildable gadget.</h1>
       <p class="hero-sub">Describe what you want to make. GadgetGenie designs the 3D model,
@@ -469,6 +470,18 @@
       </div>
       <button class="modal-close" onclick="closeBuilds()" aria-label="Close">✕</button>
     </div>
+  </div>
+
+  <!-- ============================== GENIE AVATAR ============================== -->
+  <div id="genieFab" class="genie-fab">
+    <div id="genieBubble" class="genie-bubble hidden" role="status">
+      <p id="genieText">Hi! I'm Genie!</p>
+      <div class="genie-actions">
+        <button class="btn btn-secondary btn-small" onclick="genieTip()">Tell me a tip!</button>
+        <button class="btn btn-secondary btn-small" id="genieVoiceBtn" onclick="toggleGenieVoice()">Voice: off</button>
+      </div>
+    </div>
+    <button class="genie-avatar" id="genieAvatarBtn" onclick="toggleGenieBubble()" aria-label="Talk to Genie"></button>
   </div>
 
   <footer>

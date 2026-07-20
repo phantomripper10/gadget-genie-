@@ -341,6 +341,7 @@ function openProject(id) {
   currentGadget = g;
   renderGadget(g, false, "");
   awardProgress("open_build");
+  genieSay(pick(GENIE_LINES.project), true);
 }
 
 // ---------------------------------------------------------------- parent mode
@@ -365,6 +366,13 @@ function openParentModal() {
   document.getElementById("gateError").classList.add("hidden");
   document.getElementById("parentGate").classList.toggle("hidden", parentMode);
   document.getElementById("parentPanel").classList.toggle("hidden", !parentMode);
+  // accounts a parent set up for their child keep parent mode on — no off switch for kids
+  const lockedOn = currentUser && currentUser.kind === "child";
+  const offBtn = document.querySelector("#parentPanel .btn");
+  if (offBtn) offBtn.classList.toggle("hidden", lockedOn);
+  const status = document.querySelector("#parentPanel .parent-status");
+  if (status && lockedOn) status.innerHTML = "<b>Parent mode is always on for this account.</b> It was set up by your parent when the account was created, so it can't be switched off here.";
+  else if (status) status.innerHTML = "<b>Parent mode is on.</b> Advanced builds are unlocked, and each project's Safety card now lists the steps that need an adult.";
   document.getElementById("parentModal").classList.remove("hidden");
   if (!parentMode) document.getElementById("gateAnswer").focus();
 }
@@ -386,6 +394,7 @@ function checkParentGate() {
 }
 
 function disableParentMode() {
+  if (currentUser && currentUser.kind === "child") return; // locked on for parent-created accounts
   parentMode = false;
   localStorage.removeItem("gg_parent");
   closeParentModal();
@@ -773,8 +782,13 @@ function xpForLevel(l) { return Math.pow(l - 1, 2) * 50; }
 async function awardProgress(type) {
   if (!currentUser) return; // XP lives on the account
   try {
+    const before = (currentUser.progress?.badges || []).length;
     currentUser = (await api("/api/event", { type })).user;
     updateProgressUI();
+    if ((currentUser.progress?.badges || []).length > before) {
+      genieCelebrate();
+      genieSay(pick(GENIE_LINES.badge), true);
+    }
   } catch {}
 }
 
@@ -1019,20 +1033,114 @@ function childModeInfo() {
   return { childMode: (currentUser && currentUser.kind === "child") || s.age === "6-8", age: (currentUser && currentUser.age) || s.age || "" };
 }
 
+// ---------- Genie avatar — the robot friend who talks to you ----------
+let genieVoice = localStorage.getItem("gg_voice") === "1";
+let genieHideTimer = null;
+
+const GENIE_LINES = {
+  welcome: [
+    "Hi, I'm Genie! Type any invention idea up there and I'll design the whole build for you!",
+    "Welcome back, inventor! Want to build something awesome today?",
+    "Hello hello! Pick a project below, or dream up a brand-new one — I'll draw the plans!",
+  ],
+  project: [
+    "Ooh, great pick! Check the Guide tab — I explain the science at every step!",
+    "Nice choice! Tap the Parts tab and check off pieces as you find them!",
+    "Let's build it! If you get stuck, ask me anything in the Ask Genie box!",
+  ],
+  badge: [
+    "WOOHOO! You just earned a badge! Check your progress — I'm so proud of you!",
+    "Badge unlocked! You're becoming a real engineer!",
+    "Amazing work! A new badge, just for you!",
+  ],
+  tips: [
+    "Did you know? LEDs only work one way around — the long leg is the plus side!",
+    "Tip: a resistor is like a narrow water slide — it slows electricity to a safe speed!",
+    "Recycling tip: broken toys are treasure chests full of free motors and LEDs!",
+    "Stuck? Take a photo of your build and I'll look for mistakes — that's Photo Check!",
+    "Try the Word Lab quiz — pass it and you earn XP and a challenge ticket!",
+    "Enter the Monthly Challenge! Winners get featured right on the homepage!",
+    "Electricity always flows in a loop. If your circuit's dead, look for the gap!",
+    "The best inventors make mistakes ALL the time. That's how you learn — keep going!",
+  ],
+};
+
+function genieSay(text, autoHide) {
+  const bubble = document.getElementById("genieBubble");
+  if (!bubble) return;
+  document.getElementById("genieText").textContent = text;
+  bubble.classList.remove("hidden");
+  clearTimeout(genieHideTimer);
+  if (autoHide) genieHideTimer = setTimeout(() => bubble.classList.add("hidden"), 9000);
+  if (genieVoice && "speechSynthesis" in window) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.02; u.pitch = 1.25; // bright, friendly robot voice
+    speechSynthesis.speak(u);
+  }
+}
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function toggleGenieBubble() {
+  const bubble = document.getElementById("genieBubble");
+  if (bubble.classList.contains("hidden")) genieSay(pick(GENIE_LINES.tips), false);
+  else { bubble.classList.add("hidden"); speechSynthesis?.cancel(); }
+}
+function genieTip() { genieSay(pick(GENIE_LINES.tips), false); }
+
+function toggleGenieVoice() {
+  genieVoice = !genieVoice;
+  localStorage.setItem("gg_voice", genieVoice ? "1" : "0");
+  document.getElementById("genieVoiceBtn").textContent = "Voice: " + (genieVoice ? "on" : "off");
+  if (genieVoice) genieSay("Now I can talk out loud! Hi, I'm Genie!", true);
+  else speechSynthesis?.cancel();
+}
+
+function genieCelebrate() {
+  // confetti burst for badge moments
+  const holder = document.createElement("div");
+  holder.className = "confetti";
+  const colors = ["#1266C2", "#3FAE5A", "#F4B840", "#54E0F0", "#E06CA8"];
+  for (let i = 0; i < 26; i++) {
+    const bit = document.createElement("i");
+    bit.style.left = Math.random() * 100 + "vw";
+    bit.style.background = colors[i % colors.length];
+    bit.style.animationDelay = Math.random() * 0.4 + "s";
+    bit.style.transform = `rotate(${Math.random() * 360}deg)`;
+    holder.appendChild(bit);
+  }
+  document.body.appendChild(holder);
+  setTimeout(() => holder.remove(), 2400);
+}
+
+function genieBoot() {
+  const avatar = document.getElementById("genieAvatarBtn");
+  const hero = document.getElementById("heroMascot");
+  if (avatar) avatar.innerHTML = GENIE_MASCOT;
+  if (hero) hero.innerHTML = GENIE_MASCOT;
+  document.getElementById("genieVoiceBtn").textContent = "Voice: " + (genieVoice ? "on" : "off");
+  setTimeout(() => genieSay(pick(GENIE_LINES.welcome), true), 1200);
+}
+
 // ---------- boot ----------
-document.querySelectorAll('input[name="authKind"]').forEach((r) =>
-  r.addEventListener("change", () => {
-    document.getElementById("kindNote").classList.toggle("hidden", r.value !== "child" || !r.checked);
-  })
-);
-document.getElementById("challengeMascot").innerHTML = GENIE_MASCOT;
-document.getElementById("challengeTheme").textContent = "This month: " + monthTheme();
-applySettings(false);
-loadShowcase();
-refreshParentUI(); // initial gallery paint + parent state
+try {
+  document.querySelectorAll('input[name="authKind"]').forEach((r) =>
+    r.addEventListener("change", () => {
+      document.getElementById("kindNote").classList.toggle("hidden", r.value !== "child" || !r.checked);
+    })
+  );
+  const cm = document.getElementById("challengeMascot");
+  if (cm) cm.innerHTML = GENIE_MASCOT;
+  const ct = document.getElementById("challengeTheme");
+  if (ct) ct.textContent = "This month: " + monthTheme();
+  applySettings(false);
+  loadShowcase();
+} catch (e) { console.error("boot extras failed:", e); }
+refreshParentUI(); // initial gallery paint + parent state — must always run
 updatePlanUI();
 renderAds();
 restoreSession();
+genieBoot();
 
 function onPhotoPicked(e) {
   const file = e.target.files[0];
