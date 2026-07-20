@@ -303,9 +303,47 @@ function buildViewer(container, gadget) {
 
   function frame() {
     if (autoSpin) pivot.rotation.y += 0.006;
+    if (viewer && viewer.assembly) stepAssembly();
     renderer.render(scene, camera);
     viewer.raf = requestAnimationFrame(frame);
   }
-  viewer = { renderer, scene, camera, group: pivot, raf: 0 };
+  viewer = { renderer, scene, camera, group: pivot, parts: group.children.slice(), radius, raf: 0, assembly: null };
   frame();
+}
+
+// Premium feature: parts fly in one at a time and assemble the gadget.
+function playAssembly() {
+  if (!viewer || !viewer.parts || !viewer.parts.length) return;
+  const R = viewer.radius;
+  viewer.assembly = {
+    start: performance.now(),
+    per: 550, // ms per part
+    parts: viewer.parts.map((mesh, i) => ({
+      mesh,
+      final: mesh.position.clone(),
+      from: mesh.position.clone().add(new THREE.Vector3(
+        (Math.random() - 0.5) * R * 1.5, R * 1.6 + Math.random() * R, (Math.random() - 0.5) * R * 1.5)),
+      order: i,
+    })),
+  };
+  for (const p of viewer.assembly.parts) { p.mesh.position.copy(p.from); p.mesh.visible = false; }
+}
+
+function stepAssembly() {
+  const a = viewer.assembly;
+  const t = performance.now() - a.start;
+  let done = true;
+  for (const p of a.parts) {
+    const local = (t - p.order * a.per) / a.per; // 0..1 for this part
+    if (local < 0) { done = false; continue; }
+    p.mesh.visible = true;
+    const k = Math.min(1, local);
+    const ease = 1 - Math.pow(1 - k, 3); // ease-out cubic
+    p.mesh.position.lerpVectors(p.from, p.final, ease);
+    if (k < 1) done = false;
+  }
+  if (done) {
+    for (const p of a.parts) p.mesh.position.copy(p.final);
+    viewer.assembly = null;
+  }
 }

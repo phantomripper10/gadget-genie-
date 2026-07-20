@@ -15,7 +15,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -27,6 +27,10 @@
     </a>
     <nav class="topbar-right">
       <span id="aiStatus" class="ai-pill">Checking…</span>
+      <button id="progressBtn" class="btn btn-ghost hidden" onclick="openProgress()">
+        <span class="i" data-icon="medal"></span><span id="progressLabel">Lv 1</span></button>
+      <button class="btn btn-ghost icon-btn" onclick="openSettings()" aria-label="Settings">
+        <span class="i" data-icon="gear"></span></button>
       <button id="parentBtn" class="btn btn-ghost" onclick="openParentModal()">
         <span class="i" data-icon="shield"></span>Parent mode</button>
       <button id="planBtn" class="btn btn-primary" onclick="openPricing()">Upgrade</button>
@@ -90,6 +94,37 @@
         <div id="gallery" class="gallery"></div>
       </div>
 
+      <div id="adSlotLanding"></div>
+
+      <div class="challenge-section card">
+        <div class="challenge-head">
+          <div class="challenge-mascot" id="challengeMascot"></div>
+          <div>
+            <p class="eyebrow">Monthly Gadget Challenge</p>
+            <h2 id="challengeTheme">This month: build something with recycled materials</h2>
+            <p class="challenge-sub">Enter a build you made, get featured in the showcase, and win prizes:
+              a month of Premium, STEM kits, electronics parts, or craft-store gift cards.
+              Entries are judged on creativity — <b>everyone has the same chance, always.</b></p>
+          </div>
+        </div>
+        <div class="challenge-grid">
+          <div class="challenge-tickets">
+            <b>Earn achievement tickets</b>
+            <ul>
+              <li><span class="i" data-icon="ticket"></span>Complete a project — 1 ticket</li>
+              <li><span class="i" data-icon="ticket"></span>Design an invention with Genie — 1 ticket</li>
+              <li><span class="i" data-icon="ticket"></span>Pass a Word Lab quiz — 1 ticket</li>
+              <li><span class="i" data-icon="ticket"></span>Use recycled materials — bonus ticket</li>
+            </ul>
+            <button class="btn btn-primary" onclick="openChallenge()"><span class="i" data-icon="trophy"></span>Enter this month's challenge</button>
+          </div>
+          <div class="challenge-showcase">
+            <b>Showcase — latest entries</b>
+            <div id="showcaseList" class="showcase-list"><span class="hint">Loading…</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="hero-steps">
         <div class="hstep"><div class="hstep-n">1</div><b>Describe</b><span>Any gadget, in your own words</span></div>
         <div class="hstep"><div class="hstep-n">2</div><b>Get the plan</b><span>3D model, blueprint, parts, wiring, code</span></div>
@@ -147,7 +182,6 @@
           <span class="pill" id="gDifficulty"></span>
           <span class="pill" id="gTime"></span>
           <span class="pill" id="gAge"></span>
-          <span class="pill pill-cost" id="gCost"></span>
         </div>
       </div>
       <div class="gadget-actions">
@@ -162,13 +196,17 @@
       project library. <span id="demoBannerExtra"></span>
     </div>
 
+    <div id="adSlotWorkshop"></div>
+
     <div class="workshop-grid">
       <!-- left column -->
       <div class="col-left">
         <div class="card">
           <div class="card-head"><span class="card-title"><span class="i" data-icon="cube"></span>3D model</span>
-            <span class="hint">drag to rotate · scroll to zoom</span></div>
+            <button class="btn btn-secondary btn-small" onclick="playAssemblyGated()">
+              <span class="i" data-icon="play"></span>Assembly animation</button></div>
           <div id="viewer3d"></div>
+          <p class="hint viewer-hint">drag to rotate · scroll to zoom</p>
         </div>
         <div class="card">
           <div class="card-head"><span class="card-title"><span class="i" data-icon="blueprint"></span>Blueprint</span>
@@ -262,6 +300,58 @@
     </div>
   </div>
 
+  <!-- ============================== PROGRESS MODAL ============================== -->
+  <div id="progressModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="progressTitle">
+    <div class="modal">
+      <h3 id="progressTitle"><span class="i" data-icon="medal"></span>My progress</h3>
+      <div id="progressBody"></div>
+      <button class="modal-close" onclick="closeProgress()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- ============================== SETTINGS MODAL ============================== -->
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <h3 id="settingsTitle"><span class="i" data-icon="gear"></span>Settings</h3>
+      <div class="settings-list">
+        <label class="setting-row"><span><b>Dark theme</b><small>Easier on the eyes at night</small></span>
+          <input type="checkbox" id="setDark" onchange="applySettings(true)" /></label>
+        <label class="setting-row"><span><b>Color-blind friendly mode</b><small>Higher-contrast colors, no red/green pairs</small></span>
+          <input type="checkbox" id="setCb" onchange="applySettings(true)" /></label>
+        <label class="setting-row"><span><b>Dyslexia-friendly font</b><small>Switches text to Lexend for easier reading</small></span>
+          <input type="checkbox" id="setDyslexic" onchange="applySettings(true)" /></label>
+        <label class="setting-row"><span><b>Builder's age</b><small>Genie matches words and difficulty to it</small></span>
+          <select id="setAge" onchange="applySettings(true)">
+            <option value="">Not set</option>
+            <option value="6-8">6–8</option>
+            <option value="9-11">9–11</option>
+            <option value="12-14">12–14</option>
+            <option value="15+">15+</option>
+          </select></label>
+      </div>
+      <p class="pricing-fineprint" id="settingsNote">Settings save to this device — sign in to keep them everywhere.</p>
+      <button class="modal-close" onclick="closeSettings()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- ============================== CHALLENGE MODAL ============================== -->
+  <div id="challengeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="challengeTitle">
+    <div class="modal">
+      <h3 id="challengeTitle"><span class="i" data-icon="trophy"></span>Enter the Monthly Gadget Challenge</h3>
+      <div id="challengeBody"></div>
+      <button class="modal-close" onclick="closeChallenge()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- ============================== WORD LAB MODAL ============================== -->
+  <div id="vocabModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="vocabTitle">
+    <div class="modal">
+      <h3 id="vocabTitle"><span class="i" data-icon="book"></span>Word Lab</h3>
+      <div id="vocabBody"></div>
+      <button class="modal-close" onclick="closeVocab()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
   <!-- ============================== PRICING MODAL ============================== -->
   <div id="pricingModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pricingTitle">
     <div class="modal modal-wide">
@@ -276,7 +366,9 @@
             <li>All 9 ready-made projects with full guides</li>
             <li>3 AI invention designs per day</li>
             <li>10 Genie questions per day</li>
-            <li>Blueprint downloads</li>
+            <li>Blueprint + offline guides for library projects</li>
+            <li>Challenges, badges, and streaks</li>
+            <li>Supported by ads</li>
           </ul>
           <button class="btn btn-secondary" id="freeBtn" onclick="choosePlan('free')">Current plan</button>
         </div>
@@ -286,11 +378,12 @@
           <div class="plan-name">Premium</div>
           <div class="plan-price">$4.99<span>/month</span></div>
           <ul class="plan-features">
-            <li>Everything in Free</li>
+            <li>No ads</li>
             <li>Unlimited AI invention designs</li>
             <li>Unlimited Genie questions</li>
+            <li>Animated assembly — watch your gadget build itself in 3D</li>
             <li>Photo check — Genie reviews your build</li>
-            <li>STL file + offline guide downloads</li>
+            <li>STL files + offline guides for every build</li>
           </ul>
           <button class="btn btn-primary" onclick="choosePlan('premium')">Get Premium</button>
         </div>
@@ -301,6 +394,7 @@
           <ul class="plan-features">
             <li>Everything in Premium</li>
             <li>MX design engine — deeper builds with more steps, wiring detail, and science</li>
+            <li>Priority Genie responses</li>
             <li>Early access to new features</li>
             <li>Supports keeping GadgetGenie free for kids who can't pay</li>
           </ul>
@@ -308,7 +402,8 @@
         </div>
 
       </div>
-      <p class="pricing-fineprint">No card needed for the trial. Cancel anytime. Kids: ask a parent before any purchase.</p>
+      <p class="pricing-fineprint">No card needed for the trial. Cancel anytime. Kids: ask a parent before any purchase.
+        Paying never changes contest odds — challenge winners are picked on creativity, same chance for everyone.</p>
       <button class="modal-close" onclick="closePricing()" aria-label="Close">✕</button>
     </div>
   </div>
@@ -323,6 +418,25 @@
         <button id="authTabLogin" class="fchip" onclick="setAuthMode('login')">Sign in</button>
       </div>
       <form id="authForm" onsubmit="submitAuth(event)">
+        <div class="field" id="kindField">
+          <span>Who is this account for?</span>
+          <div class="kind-row">
+            <label class="kind-opt"><input type="radio" name="authKind" value="me" checked /> It's for me</label>
+            <label class="kind-opt"><input type="radio" name="authKind" value="child" /> My child — I'm the parent</label>
+          </div>
+          <p class="kind-note hidden" id="kindNote">Parent tools unlock automatically, and Genie designs
+            extra-simple, extra-safe builds for your child.</p>
+        </div>
+        <label class="field" id="ageField">
+          <span>Builder's age (optional — Genie matches the difficulty)</span>
+          <select id="authAge">
+            <option value="">Prefer not to say</option>
+            <option value="6-8">6–8</option>
+            <option value="9-11">9–11</option>
+            <option value="12-14">12–14</option>
+            <option value="15+">15+</option>
+          </select>
+        </label>
         <label class="field" id="nameField">
           <span>Name or nickname</span>
           <input id="authName" type="text" autocomplete="nickname" maxlength="60" placeholder="Ada" />

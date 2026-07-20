@@ -140,7 +140,45 @@ function userFromToken(token) {
   return db.users[s.email] || null;
 }
 function publicUser(u) {
-  return { name: u.name, email: u.email, plan: u.plan || { tier: "free" }, buildCount: (u.builds || []).length };
+  return {
+    name: u.name, email: u.email, plan: u.plan || { tier: "free" },
+    buildCount: (u.builds || []).length,
+    kind: u.kind || "me", age: u.age || "",
+    settings: u.settings || {},
+    progress: u.progress || { xp: 0, badges: [], streak: { count: 0, last: "" }, tickets: 0 },
+  };
+}
+
+// ---------- gamification ----------
+const XP_EVENTS = { open_build: 10, ai_design: 25, genie_q: 2, vocab_quiz: 15, challenge_entry: 20 };
+const TICKET_EVENTS = { open_build: 1, ai_design: 1, vocab_quiz: 1, recycled_build: 1 }; // fair: earned by doing, never bought
+
+function awardEvent(u, type) {
+  if (!(type in XP_EVENTS) && !(type in TICKET_EVENTS)) return;
+  const p = (u.progress = u.progress || { xp: 0, badges: [], streak: { count: 0, last: "" }, tickets: 0 });
+  p.xp += XP_EVENTS[type] || 0;
+  p.tickets += TICKET_EVENTS[type] || 0;
+  p.counts = p.counts || {};
+  p.counts[type] = (p.counts[type] || 0) + 1;
+  // daily streak: any activity today extends it
+  const today = new Date().toDateString();
+  if (p.streak.last !== today) {
+    const yesterday = new Date(Date.now() - 864e5).toDateString();
+    p.streak.count = p.streak.last === yesterday ? p.streak.count + 1 : 1;
+    p.streak.last = today;
+  }
+  // badges
+  const has = (b) => p.badges.includes(b);
+  const give = (b) => { if (!has(b)) p.badges.push(b); };
+  if ((p.counts.open_build || 0) >= 1) give("first-build");
+  if ((p.counts.open_build || 0) >= 5) give("builder-5");
+  if ((p.counts.ai_design || 0) >= 1) give("inventor");
+  if ((p.counts.genie_q || 0) >= 10) give("curious-mind");
+  if ((p.counts.vocab_quiz || 0) >= 1) give("word-wizard");
+  if ((p.counts.recycled_build || 0) >= 1) give("recycler");
+  if ((p.counts.challenge_entry || 0) >= 1) give("challenger");
+  if (p.streak.count >= 3) give("streak-3");
+  if (p.streak.count >= 7) give("streak-7");
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -156,9 +194,12 @@ function handleAccounts(route, payload) {
     if (password.length < 6) return [400, { error: "Password needs at least 6 characters." }];
     if (db.users[email]) return [409, { error: "That email already has an account. Try signing in instead." }];
     const salt = crypto.randomBytes(16).toString("hex");
+    const kind = ["me", "child", "parent"].includes(payload.kind) ? payload.kind : "me";
     db.users[email] = {
       name, email, salt, passHash: hashPassword(password, salt),
       plan: { tier: "free" }, builds: [], createdAt: Date.now(),
+      kind, age: String(payload.age || "").slice(0, 12),
+      settings: {}, progress: { xp: 0, badges: [], streak: { count: 0, last: "" }, tickets: 0 },
     };
     const token = newToken();
     db.sessions[token] = { email, expires: Date.now() + 30 * 864e5 };
@@ -225,6 +266,49 @@ function handleAccounts(route, payload) {
     const b = (u.builds || []).find((x) => x.gadget.id === payload.id);
     if (!b) return [404, { error: "Build not found." }];
     return [200, { gadget: b.gadget }];
+  }
+
+  if (route === "/api/event") {
+    if (!u) return [401, { error: "Sign in to earn XP." }];
+    awardEvent(u, String(payload.type || ""));
+    saveDB();
+    return [200, { user: publicUser(u) }];
+  }
+
+  if (route === "/api/settings") {
+    if (!u) return [401, { error: "Sign in to save settings." }];
+    const s = payload.settings || {};
+    u.settings = {
+      theme: ["light", "dark"].includes(s.theme) ? s.theme : "light",
+      cb: !!s.cb, dyslexic: !!s.dyslexic,
+    };
+    if (payload.age !== undefined) u.age = String(payload.age || "").slice(0, 12);
+    saveDB();
+    return [200, { user: publicUser(u) }];
+  }
+
+  if (route === "/api/challenge/submit") {
+    if (!u) return [401, { error: "Sign in to enter the challenge." }];
+    const b = (u.builds || []).find((x) => x.gadget.id === payload.buildId);
+    if (!b) return [400, { error: "Pick one of your saved builds to enter." }];
+    db.challenge = db.challenge || [];
+    if (db.challenge.some((c) => c.email === u.email && c.buildId === payload.buildId))
+      return [409, { error: "You already entered this build. Enter a different one!" }];
+    db.challenge.unshift({
+      email: u.email, by: u.name, buildId: payload.buildId,
+      project: b.gadget.name, note: String(payload.note || "").slice(0, 200), at: Date.now(),
+    });
+    if (db.challenge.length > 100) db.challenge.length = 100;
+    awardEvent(u, "challenge_entry");
+    if (payload.recycled) awardEvent(u, "recycled_build");
+    saveDB();
+    return [200, { user: publicUser(u) }];
+  }
+
+  if (route === "/api/challenge/list") { // public showcase
+    return [200, {
+      entries: (db.challenge || []).slice(0, 12).map((c) => ({ by: c.by, project: c.project, note: c.note, at: c.at })),
+    }];
   }
 
   return null; // not an accounts route
@@ -359,8 +443,14 @@ async function handleApi(req, res, route, payload) {
 "howItWorks" (4+ paragraphs), more wiring entries with deeper explanations, and a 3D model with
 10-12 primitives. Quality over brevity.`
       : "";
+    const childExtra = payload.childMode
+      ? `\nCHILD MODE is on${payload.age ? ` (the builder is around ${payload.age})` : ""}: use extra
+simple words and short sentences, pick the safest possible parts (no cutting tools if avoidable,
+prefer tape over hot glue), require an adult for anything even slightly risky, and keep the build
+under an hour. Keep the fun high and the difficulty gentle.`
+      : "";
     const prompt = `You are Genie, GadgetGenie's AI engineering mentor for kids. A kid wants to build: "${payload.prompt}".
-Design a safe, real, buildable DIY version of it.${mxExtra}\n${GADGET_SCHEMA_HINT}`;
+Design a safe, real, buildable DIY version of it.${mxExtra}${childExtra}\n${GADGET_SCHEMA_HINT}`;
     const gadget = await aiJSON(prompt);
     return send(res, 200, { demo: false, gadget });
   }
@@ -369,7 +459,7 @@ Design a safe, real, buildable DIY version of it.${mxExtra}\n${GADGET_SCHEMA_HIN
     if (!AI_PROVIDER) return send(res, 200, { demo: true });
     const prompt = `You are Genie, a friendly STEM mentor for kids aged 8-14. They are building: ${payload.context || "a DIY gadget"}.
 Their question: "${payload.question}"
-Answer in 2-4 short, encouraging sentences. Explain the science simply with a fun analogy. No markdown.`;
+Answer in 2-4 short, encouraging sentences. Explain the science simply with a fun analogy. No markdown.${payload.childMode ? " The kid is young — use extra simple words." : ""}`;
     const answer = await aiText(prompt);
     return send(res, 200, { demo: false, answer });
   }

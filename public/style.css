@@ -31,6 +31,40 @@
   --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
+/* dark theme — same system, night tokens */
+:root[data-theme="dark"] {
+  --paper: #14181E;
+  --surface: #1D242C;
+  --ink: #E8ECF1;
+  --muted: #9AA6B3;
+  --line: #2E3742;
+  --blue-700: #7FB3EA;
+  --blue-50: #1B2C40;
+  --green-50: #17281F;
+  --red-50: #342220;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="dark"] .topbar { background: rgba(20, 24, 30, 0.92); }
+:root[data-theme="dark"] #loading { background: rgba(20, 24, 30, 0.92); }
+
+/* color-blind friendly mode — teal/amber replace green/red pairs, stronger borders */
+:root.cb-mode {
+  --green: #0E7490;
+  --green-dark: #0A5A70;
+  --green-50: #E0F1F5;
+  --red: #B45309;
+  --red-50: #FBEEDF;
+}
+:root.cb-mode[data-theme="dark"] { --green-50: #12333C; --red-50: #33270F; }
+:root.cb-mode .wire-dot { border-width: 2px; border-color: var(--ink); }
+
+/* dyslexia-friendly reading font */
+:root.dyslexic {
+  --font-head: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Lexend", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; }
@@ -523,6 +557,105 @@ pre.code {
   border: 1px dashed var(--line); border-radius: var(--r-sm); padding: 32px;
 }
 .builds-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+
+/* ---------------------------------------------------------------- challenge */
+.challenge-section { margin-top: 64px; text-align: left; }
+.challenge-head { display: flex; gap: 24px; align-items: center; margin-bottom: 24px; }
+.challenge-mascot { width: 96px; height: 96px; flex: none; }
+.challenge-mascot svg { width: 100%; height: 100%; }
+.challenge-head h2 { font-size: 20px; }
+.challenge-sub { color: var(--muted); font-size: 13.5px; margin-top: 8px; max-width: 560px; }
+.challenge-sub b { color: var(--ink); }
+.challenge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 720px) { .challenge-grid { grid-template-columns: 1fr; } .challenge-head { flex-direction: column; text-align: center; } }
+.challenge-tickets b, .challenge-showcase b { font-family: var(--font-head); font-weight: 600; font-size: 14px; }
+.challenge-tickets ul { list-style: none; margin: 12px 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.challenge-tickets li { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.challenge-tickets li .i { color: var(--green); }
+.showcase-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+.showcase-entry { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; }
+.showcase-entry b { font-size: 13px; display: block; }
+.showcase-entry span { font-size: 12px; color: var(--muted); }
+
+/* ---------------------------------------------------------------- gamification */
+.icon-btn { padding: 10px; }
+.level-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.level-bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+.level-bar div { height: 100%; background: var(--blue); border-radius: 999px; transition: width 400ms ease; }
+.prog-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.prog-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 8px;
+}
+.prog-stat .i { color: var(--blue); width: 20px; height: 20px; }
+.prog-stat b { font-family: var(--font-head); font-size: 15px; }
+.prog-stat small { font-size: 11px; color: var(--muted); }
+.badges-title { font-family: var(--font-head); font-size: 13.5px; display: block; margin-bottom: 8px; }
+.badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.badge {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 4px;
+  font-size: 11px; font-weight: 600; color: var(--muted); opacity: 0.55;
+}
+.badge .i { width: 20px; height: 20px; }
+.badge.earned { opacity: 1; color: var(--ink); border-color: var(--green); }
+.badge.earned .i { color: var(--green); }
+
+/* ---------------------------------------------------------------- settings */
+.settings-list { display: flex; flex-direction: column; gap: 4px; }
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row b { font-size: 14px; display: block; }
+.setting-row small { font-size: 12px; color: var(--muted); }
+.setting-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); flex: none; }
+.setting-row select, .field select {
+  font-family: var(--font-body); font-size: 13.5px; color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; background: var(--surface);
+}
+
+/* ---------------------------------------------------------------- auth kinds */
+.kind-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.kind-opt {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px;
+  font-size: 13.5px; font-weight: 500;
+}
+.kind-opt input { accent-color: var(--blue); }
+.kind-note { font-size: 12.5px; color: var(--green); margin-top: 4px; }
+
+/* ---------------------------------------------------------------- word lab */
+.vocab-answers { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.vocab-a { justify-content: flex-start; text-align: left; }
+.vocab-right { border-color: var(--green) !important; color: var(--green) !important; }
+.vocab-wrong { border-color: var(--red) !important; color: var(--red) !important; }
+.vocab-result { font-size: 14px; }
+
+/* ---------------------------------------------------------------- checklist + misc */
+.checklist-hint { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+table.parts .tick { width: 28px; }
+table.parts .tick input { width: 16px; height: 16px; accent-color: var(--green); }
+tr.part-done td { text-decoration: line-through; color: var(--muted); }
+tr.part-done .sust-alt, tr.part-done .cost { color: var(--muted); }
+.guide-toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.viewer-hint { margin-top: 8px; text-align: center; }
+
+/* ---------------------------------------------------------------- ads (free plan) */
+.ad-slot {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border: 1px dashed var(--line); border-radius: var(--r-sm);
+  padding: 12px 16px; margin: 24px 0 0;
+  background: var(--surface);
+}
+#adSlotWorkshop .ad-slot { margin: 0 0 16px; }
+.ad-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px;
+}
+.ad-copy { flex: 1; font-size: 13px; color: var(--muted); min-width: 200px; }
+.ad-copy b { color: var(--ink); }
 
 /* ---------------------------------------------------------------- footer */
 footer { border-top: 1px solid var(--line); margin-top: 32px; }

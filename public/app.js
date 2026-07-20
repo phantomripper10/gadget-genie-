@@ -30,11 +30,19 @@ function updateAuthUI() {
     authBtn.classList.add("hidden");
     buildsBtn.classList.remove("hidden");
     buildsBtn.textContent = `My builds (${currentUser.buildCount})`;
+    if (currentUser.kind === "child" && !parentMode) { // parent-created account: parent tools on
+      parentMode = true;
+      localStorage.setItem("gg_parent", "1");
+      refreshParentUI();
+    }
   } else {
     authBtn.classList.remove("hidden");
     buildsBtn.classList.add("hidden");
   }
   updatePlanUI();
+  if (typeof updateProgressUI === "function") updateProgressUI();
+  if (typeof renderAds === "function") renderAds();
+  if (typeof applySettings === "function") applySettings(false);
 }
 
 async function restoreSession() {
@@ -78,6 +86,8 @@ async function submitAuth(e) {
       name: document.getElementById("authName").value,
       email: document.getElementById("authEmail").value,
       password: document.getElementById("authPassword").value,
+      kind: document.querySelector('input[name="authKind"]:checked')?.value || "me",
+      age: document.getElementById("authAge").value,
     });
     authToken = data.token;
     localStorage.setItem("gg_token", authToken);
@@ -134,7 +144,7 @@ async function openBuilds() {
         <div class="build-art">${GADGET_ART[b.id] || GADGET_ART.default}</div>
         <div class="build-meta">
           <b>${escapeHtml(b.name)}</b>
-          <span>${escapeHtml(b.difficulty || "")} · ~$${(b.cost || 0).toFixed(2)} · saved ${new Date(b.savedAt).toLocaleDateString()}</span>
+          <span>${escapeHtml(b.difficulty || "")} · saved ${new Date(b.savedAt).toLocaleDateString()}</span>
         </div>
         <span class="build-open">Open</span>
       </button>`).join("");
@@ -197,6 +207,7 @@ function updatePlanUI() {
   btn.classList.toggle("plan-active", tier !== "free");
   const freeBtn = document.getElementById("freeBtn");
   freeBtn.textContent = tier === "free" ? "Current plan" : "Downgrade to Free";
+  if (typeof renderAds === "function") renderAds();
 }
 
 function openPricing(reason) {
@@ -317,7 +328,6 @@ function renderGallery() {
         <div class="gcard-pills">
           <span class="gpill gpill-cat">${CAT_LABEL[g.category] || "Project"}</span>
           <span class="gpill">${escapeHtml(g.difficulty)}</span>
-          <span class="gpill gpill-cost">~$${total(g).toFixed(0)}</span>
         </div>
       </div>
     </button>`;
@@ -330,6 +340,7 @@ function openProject(id) {
   if (g.difficulty === "Advanced" && !parentMode) { openParentModal(); return; }
   currentGadget = g;
   renderGadget(g, false, "");
+  awardProgress("open_build");
 }
 
 // ---------------------------------------------------------------- parent mode
@@ -452,10 +463,10 @@ async function generate() {
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: aiPrompt, mx: planTier() === "mx" }),
+      body: JSON.stringify({ prompt: aiPrompt, mx: planTier() === "mx", ...childModeInfo() }),
     });
     const data = await res.json();
-    if (data.gadget) { gadget = data.gadget; bumpUsage("ai"); }
+    if (data.gadget) { gadget = data.gadget; bumpUsage("ai"); awardProgress("ai_design"); }
     else demo = true;
     if (data.error) { demo = true; demoExtra = "(AI error: " + data.error + ")"; }
   } catch { demo = true; }
@@ -492,8 +503,6 @@ function renderGadget(g, demo, demoExtra) {
   document.getElementById("gDifficulty").textContent = g.difficulty || "Beginner";
   document.getElementById("gTime").textContent = g.buildTime || "~1 hour";
   document.getElementById("gAge").textContent = "Ages " + (g.ageRange || "8+");
-  const total = (g.parts || []).reduce((s, p) => s + (Number(p.cost) || 0), 0);
-  document.getElementById("gCost").textContent = "~$" + total.toFixed(2);
 
   const banner = document.getElementById("demoBanner");
   banner.classList.toggle("hidden", !demo);
@@ -524,6 +533,12 @@ function renderTab(tab) {
 
   if (tab === "guide") {
     el.innerHTML =
+      `<div class="guide-toolbar">
+        <button class="btn btn-secondary btn-small" onclick="readAloud()">
+          <span class="i">${ICONS.speaker}</span><span id="ttsLabel">Read aloud</span></button>
+        <button class="btn btn-secondary btn-small" onclick="openVocab()">
+          <span class="i">${ICONS.book}</span>Word Lab quiz</button>
+      </div>` +
       `<div class="tools-row"><b>You'll need:</b> ${(g.tools || []).map(escapeHtml).join(" · ")}</div>` +
       (g.steps || []).map((s, i) => `
         <div class="step">
@@ -537,24 +552,25 @@ function renderTab(tab) {
   }
 
   if (tab === "parts") {
-    const rows = (g.parts || []).map((p) => {
+    const checked = getChecklist(g.id);
+    const rows = (g.parts || []).map((p, i) => {
       const cost = Number(p.cost) || 0;
-      return `<tr>
+      return `<tr class="${checked.includes(i) ? "part-done" : ""}" data-part="${i}">
+        <td class="tick"><input type="checkbox" aria-label="Got this part" ${checked.includes(i) ? "checked" : ""}
+            onchange="togglePart('${escapeHtml(g.id)}', ${i}, this.checked)" /></td>
         <td>${escapeHtml(p.item)}${p.sustainable ? `<span class="sust-alt">Free option: ${escapeHtml(p.sustainable)}</span>` : ""}</td>
         <td>${escapeHtml(p.qty)}</td>
         <td class="cost">${cost === 0 ? "FREE" : "$" + cost.toFixed(2)}</td>
         <td>${p.buy ? `<a class="buy-link" target="_blank" rel="noopener" href="https://www.google.com/search?tbm=shop&q=${encodeURIComponent(p.buy)}">Buy</a>` : "—"}</td>
       </tr>`;
     }).join("");
-    const total = (g.parts || []).reduce((s, p) => s + (Number(p.cost) || 0), 0);
     const freeCount = (g.parts || []).filter((p) => !Number(p.cost)).length;
-    el.innerHTML = `<div class="table-wrap"><table class="parts">
-        <thead><tr><th>Item</th><th>Qty</th><th>Est. cost</th><th>Buy</th></tr></thead>
+    el.innerHTML = `<p class="checklist-hint">Check off each part as you collect it.</p>
+      <div class="table-wrap"><table class="parts">
+        <thead><tr><th></th><th>Item</th><th>Qty</th><th>Est. cost</th><th>Buy</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
-      <div class="parts-total">Total: ~$${total.toFixed(2)}
-        ${freeCount ? `<div class="free">${freeCount} part${freeCount > 1 ? "s" : ""} free from recycling</div>` : ""}
-      </div>`;
+      ${freeCount ? `<div class="parts-total"><div class="free">${freeCount} part${freeCount > 1 ? "s" : ""} free from recycling</div></div>` : ""}`;
   }
 
   if (tab === "wiring") {
@@ -699,6 +715,7 @@ async function askMentor() {
     return;
   }
   bumpUsage("genie");
+  awardProgress("genie_q");
   input.value = "";
   const askBtn = document.getElementById("askBtn");
   askBtn.classList.add("is-loading");
@@ -711,7 +728,7 @@ async function askMentor() {
         const res = await fetch("/api/mentor", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: q, context: currentGadget?.name }),
+          body: JSON.stringify({ question: q, context: currentGadget?.name, ...childModeInfo() }),
         });
         const data = await res.json();
         if (data.answer) { thinking.remove(); mentorAppend(data.answer); return; }
@@ -734,8 +751,287 @@ async function askMentor() {
 document.getElementById("gateAnswer").addEventListener("keydown", (e) => {
   if (e.key === "Enter") checkParentGate();
 });
+// ============================================================================
+// Gamification, settings, challenge, Word Lab, read-aloud, ads, assembly
+// ============================================================================
+
+// ---------- progress / XP ----------
+const BADGES = {
+  "first-build": ["First Build", "Opened your first project"],
+  "builder-5": ["Serial Builder", "Completed 5 projects"],
+  "inventor": ["Inventor", "Designed an invention with Genie"],
+  "curious-mind": ["Curious Mind", "Asked Genie 10 questions"],
+  "word-wizard": ["Word Wizard", "Passed a Word Lab quiz"],
+  "recycler": ["Recycler", "Built with recycled materials"],
+  "challenger": ["Challenger", "Entered a Monthly Challenge"],
+  "streak-3": ["On Fire", "3-day build streak"],
+  "streak-7": ["Unstoppable", "7-day build streak"],
+};
+function levelFromXp(xp) { return Math.floor(Math.sqrt((xp || 0) / 50)) + 1; }
+function xpForLevel(l) { return Math.pow(l - 1, 2) * 50; }
+
+async function awardProgress(type) {
+  if (!currentUser) return; // XP lives on the account
+  try {
+    currentUser = (await api("/api/event", { type })).user;
+    updateProgressUI();
+  } catch {}
+}
+
+function updateProgressUI() {
+  const btn = document.getElementById("progressBtn");
+  if (!currentUser) { btn.classList.add("hidden"); return; }
+  const p = currentUser.progress || { xp: 0, streak: { count: 0 } };
+  btn.classList.remove("hidden");
+  document.getElementById("progressLabel").textContent =
+    `Lv ${levelFromXp(p.xp)}${p.streak.count > 1 ? " · " + p.streak.count + "🔥".replace("🔥", "-day") : ""}`;
+}
+
+function openProgress() {
+  if (!currentUser) { openAuth(); return; }
+  const p = currentUser.progress || { xp: 0, badges: [], streak: { count: 0 }, tickets: 0 };
+  const lvl = levelFromXp(p.xp);
+  const cur = xpForLevel(lvl), next = xpForLevel(lvl + 1);
+  const pct = Math.min(100, Math.round(((p.xp - cur) / (next - cur)) * 100));
+  document.getElementById("progressBody").innerHTML = `
+    <div class="level-row"><b>Level ${lvl}</b><span class="hint">${p.xp} XP · ${next - p.xp} to level ${lvl + 1}</span></div>
+    <div class="level-bar"><div style="width:${pct}%"></div></div>
+    <div class="prog-stats">
+      <div class="prog-stat"><span class="i">${ICONS.flame}</span><b>${p.streak.count || 0}-day</b><small>streak</small></div>
+      <div class="prog-stat"><span class="i">${ICONS.ticket}</span><b>${p.tickets || 0}</b><small>challenge tickets</small></div>
+      <div class="prog-stat"><span class="i">${ICONS.cube}</span><b>${currentUser.buildCount}</b><small>builds saved</small></div>
+    </div>
+    <b class="badges-title">Badges — ${p.badges.length}/${Object.keys(BADGES).length}</b>
+    <div class="badges">${Object.entries(BADGES).map(([id, [name, how]]) => `
+      <div class="badge ${p.badges.includes(id) ? "earned" : ""}" title="${escapeHtml(how)}">
+        <span class="i">${ICONS.medal}</span><span>${escapeHtml(name)}</span>
+      </div>`).join("")}</div>`;
+  document.getElementById("progressModal").classList.remove("hidden");
+}
+function closeProgress() { document.getElementById("progressModal").classList.add("hidden"); }
+
+// ---------- settings (theme / color-blind / dyslexia font / age) ----------
+function getSettings() {
+  if (currentUser && currentUser.settings && Object.keys(currentUser.settings).length)
+    return { ...currentUser.settings, age: currentUser.age };
+  try { return JSON.parse(localStorage.getItem("gg_settings") || "{}"); } catch { return {}; }
+}
+
+function applySettings(fromUI) {
+  let s;
+  if (fromUI) {
+    s = {
+      theme: document.getElementById("setDark").checked ? "dark" : "light",
+      cb: document.getElementById("setCb").checked,
+      dyslexic: document.getElementById("setDyslexic").checked,
+      age: document.getElementById("setAge").value,
+    };
+    localStorage.setItem("gg_settings", JSON.stringify(s));
+    if (currentUser) api("/api/settings", { settings: s, age: s.age }).then((d) => (currentUser = d.user)).catch(() => {});
+  } else {
+    s = getSettings();
+  }
+  const root = document.documentElement;
+  root.dataset.theme = s.theme === "dark" ? "dark" : "light";
+  root.classList.toggle("cb-mode", !!s.cb);
+  root.classList.toggle("dyslexic", !!s.dyslexic);
+}
+
+function openSettings() {
+  const s = getSettings();
+  document.getElementById("setDark").checked = s.theme === "dark";
+  document.getElementById("setCb").checked = !!s.cb;
+  document.getElementById("setDyslexic").checked = !!s.dyslexic;
+  document.getElementById("setAge").value = s.age || "";
+  document.getElementById("settingsNote").textContent = currentUser
+    ? "Settings save to your account and follow you to any computer."
+    : "Settings save to this device — sign in to keep them everywhere.";
+  document.getElementById("settingsModal").classList.remove("hidden");
+}
+function closeSettings() { document.getElementById("settingsModal").classList.add("hidden"); }
+
+// ---------- monthly challenge ----------
+const CHALLENGE_THEMES = [
+  "build something with recycled materials", "design an energy-saving gadget",
+  "build something that helps someone in your family", "make a gadget for your pet or garden",
+  "build something using only cardboard", "invent a gadget that cleans something up",
+  "make something that moves without a motor", "build a gadget that uses light",
+  "design something for a friend who needs it", "build the quietest useful machine you can",
+  "make a gadget powered by rubber bands or gravity", "invent something festive",
+];
+function monthTheme() { return CHALLENGE_THEMES[new Date().getMonth()]; }
+
+async function loadShowcase() {
+  const el = document.getElementById("showcaseList");
+  try {
+    const res = await fetch("/api/challenge/list", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const data = await res.json();
+    el.innerHTML = data.entries.length
+      ? data.entries.map((e) => `<div class="showcase-entry"><b>${escapeHtml(e.project)}</b>
+          <span>by ${escapeHtml(e.by)}${e.note ? " — “" + escapeHtml(e.note) + "”" : ""}</span></div>`).join("")
+      : `<span class="hint">No entries yet this month — be the first!</span>`;
+  } catch { el.innerHTML = `<span class="hint">Showcase loads when you're online.</span>`; }
+}
+
+async function openChallenge() {
+  const body = document.getElementById("challengeBody");
+  if (!currentUser) {
+    body.innerHTML = `<p>Sign in to enter — your builds and tickets live on your account.</p>
+      <button class="btn btn-primary" onclick="closeChallenge(); openAuth()">Sign in first</button>`;
+  } else {
+    let builds = [];
+    try { builds = (await api("/api/builds/list", {})).builds; } catch {}
+    const tickets = currentUser.progress?.tickets || 0;
+    body.innerHTML = builds.length ? `
+      <p>This month's theme: <b>${escapeHtml(monthTheme())}</b>. Pick one of your builds:</p>
+      <label class="field"><span>Your build</span>
+        <select id="chBuild">${builds.map((b) => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`).join("")}</select></label>
+      <label class="field"><span>Tell the judges about it (optional)</span>
+        <input id="chNote" type="text" maxlength="200" placeholder="I used two bottles from our recycling bin!" /></label>
+      <label class="kind-opt"><input type="checkbox" id="chRecycled" /> I used recycled materials (bonus ticket)</label>
+      <p class="hint">You have ${tickets} achievement ticket${tickets === 1 ? "" : "s"}. Winners are picked for creativity —
+        tickets celebrate effort, they never change your odds. Paying users get no advantage.</p>
+      <button class="btn btn-primary auth-submit" onclick="submitChallenge()">Submit my entry</button>
+      <p id="chError" class="gate-error hidden"></p>`
+      : `<p>You don't have any saved builds yet! Open a project or design something with Genie first —
+         it saves to your account automatically.</p>`;
+  }
+  document.getElementById("challengeModal").classList.remove("hidden");
+}
+function closeChallenge() { document.getElementById("challengeModal").classList.add("hidden"); }
+
+async function submitChallenge() {
+  const err = document.getElementById("chError");
+  err.classList.add("hidden");
+  try {
+    currentUser = (await api("/api/challenge/submit", {
+      buildId: document.getElementById("chBuild").value,
+      note: document.getElementById("chNote").value,
+      recycled: document.getElementById("chRecycled").checked,
+    })).user;
+    closeChallenge();
+    updateProgressUI();
+    loadShowcase();
+    openProgress(); // show off the new badge + tickets
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.classList.remove("hidden");
+  }
+}
+
+// ---------- Word Lab (vocabulary quiz) ----------
+const VOCAB_QUIZ = [
+  { q: "What does a resistor do in a circuit?", a: ["Slows the current to a safe amount", "Stores electricity for later", "Makes the current go faster"], correct: 0 },
+  { q: "Why do LEDs only light up one way around?", a: ["They're diodes — one-way streets for current", "The long leg is heavier", "They need to warm up first"], correct: 0 },
+  { q: "What is a circuit?", a: ["A complete loop electricity flows around", "Any pile of wires", "A kind of battery"], correct: 0 },
+  { q: "What does the breadboard do?", a: ["Connects parts with hidden metal rails — no soldering", "Keeps the parts warm", "Stores your code"], correct: 0 },
+  { q: "PWM makes a motor slower by…", a: ["Switching power on and off really fast", "Lowering the room temperature", "Using thinner wires"], correct: 0 },
+];
+let vocabIndex = 0, vocabScore = 0;
+
+function openVocab() {
+  vocabIndex = 0; vocabScore = 0;
+  renderVocabQ();
+  document.getElementById("vocabModal").classList.remove("hidden");
+}
+function closeVocab() { document.getElementById("vocabModal").classList.add("hidden"); }
+
+function renderVocabQ() {
+  const body = document.getElementById("vocabBody");
+  if (vocabIndex >= VOCAB_QUIZ.length) {
+    const passed = vocabScore >= 4;
+    body.innerHTML = `<p class="vocab-result"><b>${vocabScore}/${VOCAB_QUIZ.length} correct.</b>
+      ${passed ? "You passed — Word Wizard material! XP and a challenge ticket earned." : "Almost! Reread the Genie tips in any guide and try again."}</p>
+      <button class="btn btn-primary auth-submit" onclick="closeVocab()">Done</button>`;
+    if (passed) awardProgress("vocab_quiz");
+    return;
+  }
+  const item = VOCAB_QUIZ[vocabIndex];
+  const order = item.a.map((t, i) => ({ t, i })).sort(() => Math.random() - 0.5);
+  body.innerHTML = `<p class="hint">Question ${vocabIndex + 1} of ${VOCAB_QUIZ.length}</p>
+    <p><b>${escapeHtml(item.q)}</b></p>
+    <div class="vocab-answers">${order.map((o) => `
+      <button class="btn btn-secondary vocab-a" onclick="answerVocab(${o.i}, this)">${escapeHtml(o.t)}</button>`).join("")}</div>`;
+}
+function answerVocab(i, btn) {
+  const item = VOCAB_QUIZ[vocabIndex];
+  if (i === item.correct) { vocabScore++; btn.classList.add("vocab-right"); }
+  else btn.classList.add("vocab-wrong");
+  setTimeout(() => { vocabIndex++; renderVocabQ(); }, 450);
+}
+
+// ---------- read aloud (text-to-speech) ----------
+let speaking = false;
+function readAloud() {
+  const label = document.getElementById("ttsLabel");
+  if (speaking) { speechSynthesis.cancel(); speaking = false; if (label) label.textContent = "Read aloud"; return; }
+  const g = currentGadget;
+  if (!g || !("speechSynthesis" in window)) return;
+  const text = (g.steps || []).map((s, i) => `Step ${i + 1}. ${s.title}. ${s.text}`).join(" ");
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.95;
+  utter.onend = () => { speaking = false; if (document.getElementById("ttsLabel")) document.getElementById("ttsLabel").textContent = "Read aloud"; };
+  speechSynthesis.speak(utter);
+  speaking = true;
+  if (label) label.textContent = "Stop reading";
+}
+
+// ---------- parts checklist ----------
+function getChecklist(id) {
+  try { return JSON.parse(localStorage.getItem("gg_check_" + id) || "[]"); } catch { return []; }
+}
+function togglePart(id, index, on) {
+  let c = getChecklist(id).filter((x) => x !== index);
+  if (on) c.push(index);
+  localStorage.setItem("gg_check_" + id, JSON.stringify(c));
+  const row = document.querySelector(`tr[data-part="${index}"]`);
+  if (row) row.classList.toggle("part-done", on);
+}
+
+// ---------- ads (free plan) ----------
+function renderAds() {
+  const paid = isPaid();
+  for (const slotId of ["adSlotLanding", "adSlotWorkshop"]) {
+    const el = document.getElementById(slotId);
+    if (!el) continue;
+    el.innerHTML = paid ? "" : `
+      <div class="ad-slot">
+        <span class="ad-tag">Sponsored</span>
+        <span class="ad-copy">This spot supports free GadgetGenie for every kid. <b>Premium removes ads.</b></span>
+        <button class="btn btn-secondary btn-small" onclick="openPricing()">Go ad-free</button>
+      </div>`;
+  }
+}
+
+// ---------- assembly animation (Premium) ----------
+function playAssemblyGated() {
+  if (!currentGadget) return;
+  if (!isPaid()) {
+    openPricing("The animated assembly — watching your gadget build itself in 3D — is a Premium feature.");
+    return;
+  }
+  if (typeof playAssembly === "function") playAssembly();
+}
+
+// ---------- child mode helper ----------
+function childModeInfo() {
+  const s = getSettings();
+  return { childMode: (currentUser && currentUser.kind === "child") || s.age === "6-8", age: (currentUser && currentUser.age) || s.age || "" };
+}
+
+// ---------- boot ----------
+document.querySelectorAll('input[name="authKind"]').forEach((r) =>
+  r.addEventListener("change", () => {
+    document.getElementById("kindNote").classList.toggle("hidden", r.value !== "child" || !r.checked);
+  })
+);
+document.getElementById("challengeMascot").innerHTML = GENIE_MASCOT;
+document.getElementById("challengeTheme").textContent = "This month: " + monthTheme();
+applySettings(false);
+loadShowcase();
 refreshParentUI(); // initial gallery paint + parent state
 updatePlanUI();
+renderAds();
 restoreSession();
 
 function onPhotoPicked(e) {

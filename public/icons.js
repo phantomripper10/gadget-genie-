@@ -40,7 +40,31 @@ const ICONS = {
   check: svg24(`<path d="M5 12.5l4.5 4.5L19 7.5"/>`),
   arrow: svg24(`<path d="M5 12h14M13 6l6 6-6 6"/>`),
   github: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-3.16 19.5c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.03a9.56 9.56 0 015 0c1.91-1.3 2.75-1.03 2.75-1.03.55 1.38.2 2.4.1 2.65.64.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0012 2z"/></svg>`,
+  trophy: svg24(`<path d="M8 4h8v3a4 4 0 01-8 0z"/><path d="M8 5H5a3 3 0 003 3.5M16 5h3a3 3 0 01-3 3.5M12 11v3M9 19.5h6M12 14c-1 0-2 .8-2 2.5v3h4v-3c0-1.7-1-2.5-2-2.5z" transform="translate(0 .5)"/>`),
+  gear: svg24(`<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6L18 18M18 6l-1.4 1.4M7.4 16.6L6 18"/>`),
+  speaker: svg24(`<path d="M4 10v4h3l4.5 3.5v-11L7 10z"/><path d="M15 9.5a3.5 3.5 0 010 5M17.5 7.5a7 7 0 010 9"/>`),
+  medal: svg24(`<circle cx="12" cy="14.5" r="5"/><path d="M12 12.7l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z" fill="currentColor" stroke="none"/><path d="M8.5 10L6 3.5M15.5 10L18 3.5M9.8 3.5h4.4"/>`),
+  flame: svg24(`<path d="M12 3.5c1 3-3.5 4.5-3.5 9a5.5 5.5 0 0011 0c0-2.5-1.5-4-2.5-5-.2 1.2-.8 2-1.8 2.4C15.5 8 15 5 12 3.5z"/>`),
+  ticket: svg24(`<path d="M4 8a2 2 0 002-2h12a2 2 0 002 2v2.5a1.5 1.5 0 000 3V16a2 2 0 00-2 2H6a2 2 0 00-2-2v-2.5a1.5 1.5 0 000-3z" transform="translate(0 -1)"/><path d="M14 6v12" stroke-dasharray="2 2.5"/>`),
+  book: svg24(`<path d="M5 4.5A2.5 2.5 0 017.5 2H19v17.5H7.5A2.5 2.5 0 005 22z"/><path d="M5 19.5A2.5 2.5 0 017.5 17H19M9 6.5h6M9 9.5h4"/>`),
+  play: svg24(`<circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/>`),
 };
+
+// The Genie mascot — GadgetGenie's friendly robot-genie character.
+const GENIE_MASCOT = `<svg viewBox="0 0 96 96" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M48 84c-9 0-14-3-14-3s2-7 6-9" stroke="var(--blue)" fill="none"/>
+  <path d="M34 81c-4 1-8-1-8-4 0-2 2-3 4-3" stroke="var(--blue)"/>
+  <rect x="30" y="30" width="36" height="30" rx="12" fill="var(--surface)"/>
+  <path d="M48 30v-8" />
+  <circle cx="48" cy="18" r="3.5" fill="var(--yellowspark, #F4B840)" stroke="var(--ink)"/>
+  <circle cx="41" cy="43" r="3" fill="var(--ink)" stroke="none"/>
+  <circle cx="55" cy="43" r="3" fill="var(--ink)" stroke="none"/>
+  <path d="M41 51c2 2.5 5 3.5 7 3.5s5-1 7-3.5" />
+  <path d="M30 42h-6M66 42h6" stroke="var(--blue)"/>
+  <path d="M40 66c0 5 3 8 8 8s8-3 8-8" fill="var(--blue)" stroke="var(--ink)"/>
+  <path d="M40 60v6M56 60v6" />
+  <path d="M70 74l2.2 4.8L77 81l-4.8 2.2L70 88l-2.2-4.8L63 81l4.8-2.2z" fill="var(--yellowspark, #F4B840)" stroke="var(--ink)" stroke-width="2"/>
+</svg>`;
 
 // Injects icons into <span class="i" data-icon="name"> placeholders.
 function mountIcons(root) {
