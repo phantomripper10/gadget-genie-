@@ -7,6 +7,73 @@ let filterDiff = "any";  // any | Beginner | Intermediate | Advanced
 let filterMat = "any";   // any | cardboard | plastic | wood | metal | electronics
 let parentMode = localStorage.getItem("gg_parent") === "1";
 
+// ---------------------------------------------------------------- plans & monetization
+// To turn on REAL payments: create Stripe Payment Links (a parent's Stripe account)
+// and paste them here. Until then, upgrade buttons start a free 7-day trial.
+const STRIPE_LINKS = { premium: "", mx: "" };
+const TRIAL_DAYS = 7;
+const FREE_LIMITS = { aiDesigns: 3, genieQuestions: 10 };
+const PLAN_NAMES = { free: "Free", premium: "Premium", mx: "MX" };
+
+function getPlan() {
+  try {
+    const p = JSON.parse(localStorage.getItem("gg_plan") || "null");
+    if (p && p.tier !== "free" && p.until && Date.now() > p.until) return { tier: "free" }; // trial expired
+    return p || { tier: "free" };
+  } catch { return { tier: "free" }; }
+}
+function planTier() { return getPlan().tier; }
+function isPaid() { return planTier() !== "free"; }
+
+// daily usage counters for the free tier
+function usage() {
+  const today = new Date().toDateString();
+  let u;
+  try { u = JSON.parse(localStorage.getItem("gg_usage") || "null"); } catch {}
+  if (!u || u.day !== today) u = { day: today, ai: 0, genie: 0 };
+  return u;
+}
+function bumpUsage(key) {
+  const u = usage();
+  u[key] += 1;
+  localStorage.setItem("gg_usage", JSON.stringify(u));
+}
+
+function updatePlanUI() {
+  const btn = document.getElementById("planBtn");
+  const tier = planTier();
+  btn.textContent = tier === "free" ? "Upgrade" : PLAN_NAMES[tier] + " plan";
+  btn.classList.toggle("plan-active", tier !== "free");
+  const freeBtn = document.getElementById("freeBtn");
+  freeBtn.textContent = tier === "free" ? "Current plan" : "Downgrade to Free";
+}
+
+function openPricing(reason) {
+  const r = document.getElementById("pricingReason");
+  if (reason) { r.textContent = reason; r.classList.remove("hidden"); }
+  else r.classList.add("hidden");
+  document.getElementById("pricingModal").classList.remove("hidden");
+}
+function closePricing() { document.getElementById("pricingModal").classList.add("hidden"); }
+
+function choosePlan(tier) {
+  if (tier === "free") {
+    localStorage.removeItem("gg_plan");
+    updatePlanUI();
+    closePricing();
+    return;
+  }
+  if (STRIPE_LINKS[tier]) {
+    window.open(STRIPE_LINKS[tier], "_blank", "noopener"); // real checkout
+    return;
+  }
+  // payments not connected yet — start a card-free trial so the feature set works
+  localStorage.setItem("gg_plan", JSON.stringify({ tier, until: Date.now() + TRIAL_DAYS * 864e5 }));
+  updatePlanUI();
+  closePricing();
+  alert(`${PLAN_NAMES[tier]} trial started — free for ${TRIAL_DAYS} days, no card needed.\n(Real checkout opens here once Stripe links are added.)`);
+}
+
 // ---------------------------------------------------------------- boot
 
 fetch("/api/status").then((r) => r.json()).then((s) => {
@@ -184,7 +251,7 @@ const LOADER_MSGS = [
   "Counting screws and LEDs…",
   "Pricing every part…",
   "Writing your Arduino code…",
-  "Waking up your mentor…",
+  "Waking up Genie…",
 ];
 
 let loaderTimer = null;
@@ -213,6 +280,11 @@ async function generate() {
   const prompt = document.getElementById("promptInput").value.trim();
   if (!prompt) { document.getElementById("promptInput").focus(); return; }
 
+  if (!isPaid() && aiLive && usage().ai >= FREE_LIMITS.aiDesigns) {
+    openPricing(`You've used your ${FREE_LIMITS.aiDesigns} free AI designs for today. Premium removes the limit — or come back tomorrow.`);
+    return;
+  }
+
   showLoader();
   let gadget = null, demo = false, demoExtra = "";
 
@@ -226,10 +298,10 @@ async function generate() {
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: aiPrompt }),
+      body: JSON.stringify({ prompt: aiPrompt, mx: planTier() === "mx" }),
     });
     const data = await res.json();
-    if (data.gadget) gadget = data.gadget;
+    if (data.gadget) { gadget = data.gadget; bumpUsage("ai"); }
     else demo = true;
     if (data.error) { demo = true; demoExtra = "(AI error: " + data.error + ")"; }
   } catch { demo = true; }
@@ -373,6 +445,10 @@ function downloadBlob(content, filename, type) {
 
 function downloadSTL() {
   if (!currentGadget) return;
+  if (!isPaid()) {
+    openPricing("STL downloads for 3D printing are a Premium feature. Blueprints stay free.");
+    return;
+  }
   downloadBlob(generateSTL(currentGadget.model, currentGadget.id), currentGadget.id + ".stl", "model/stl");
 }
 
@@ -390,6 +466,10 @@ function downloadBlueprint() {
 function downloadOfflineGuide() {
   const g = currentGadget;
   if (!g) return;
+  if (!isPaid()) {
+    openPricing("Offline guide downloads are a Premium feature — great for building with no internet.");
+    return;
+  }
   const total = (g.parts || []).reduce((s, p) => s + (Number(p.cost) || 0), 0);
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(g.name)} — Build Guide</title>
 <style>
@@ -459,6 +539,11 @@ async function askMentor() {
   const input = document.getElementById("mentorInput");
   const q = input.value.trim();
   if (!q) return;
+  if (!isPaid() && usage().genie >= FREE_LIMITS.genieQuestions) {
+    openPricing(`Genie answered ${FREE_LIMITS.genieQuestions} questions today — that's the Free limit. Premium makes Genie unlimited.`);
+    return;
+  }
+  bumpUsage("genie");
   input.value = "";
   const askBtn = document.getElementById("askBtn");
   askBtn.classList.add("is-loading");
@@ -495,10 +580,16 @@ document.getElementById("gateAnswer").addEventListener("keydown", (e) => {
   if (e.key === "Enter") checkParentGate();
 });
 refreshParentUI(); // initial gallery paint + parent state
+updatePlanUI();
 
 function onPhotoPicked(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (!isPaid()) {
+    e.target.value = "";
+    openPricing("Photo check — where Genie looks at your build and spots mistakes — is a Premium feature.");
+    return;
+  }
   const reader = new FileReader();
   reader.onload = async () => {
     const dataUrl = reader.result;

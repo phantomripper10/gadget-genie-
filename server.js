@@ -156,15 +156,20 @@ async function handleApi(req, res, route, payload) {
 
   if (route === "/api/generate") {
     if (!AI_PROVIDER) return send(res, 200, { demo: true });
-    const prompt = `You are GadgetGenie, an AI engineering mentor for kids. A kid wants to build: "${payload.prompt}".
-Design a safe, real, buildable DIY version of it.\n${GADGET_SCHEMA_HINT}`;
+    const mxExtra = payload.mx
+      ? `\nThis user has the MX plan: make the design EXTRA detailed — 8-10 build steps, a richer
+"howItWorks" (4+ paragraphs), more wiring entries with deeper explanations, and a 3D model with
+10-12 primitives. Quality over brevity.`
+      : "";
+    const prompt = `You are Genie, GadgetGenie's AI engineering mentor for kids. A kid wants to build: "${payload.prompt}".
+Design a safe, real, buildable DIY version of it.${mxExtra}\n${GADGET_SCHEMA_HINT}`;
     const gadget = await aiJSON(prompt);
     return send(res, 200, { demo: false, gadget });
   }
 
   if (route === "/api/mentor") {
     if (!AI_PROVIDER) return send(res, 200, { demo: true });
-    const prompt = `You are a friendly STEM mentor for kids aged 8-14. They are building: ${payload.context || "a DIY gadget"}.
+    const prompt = `You are Genie, a friendly STEM mentor for kids aged 8-14. They are building: ${payload.context || "a DIY gadget"}.
 Their question: "${payload.question}"
 Answer in 2-4 short, encouraging sentences. Explain the science simply with a fun analogy. No markdown.`;
     const answer = await aiText(prompt);
@@ -173,7 +178,7 @@ Answer in 2-4 short, encouraging sentences. Explain the science simply with a fu
 
   if (route === "/api/check-photo") {
     if (!AI_PROVIDER) return send(res, 200, { demo: true });
-    const prompt = `You are a STEM mentor for kids. This photo shows a kid's in-progress build of: ${payload.context || "a DIY gadget"}.
+    const prompt = `You are Genie, a STEM mentor for kids. This photo shows a kid's in-progress build of: ${payload.context || "a DIY gadget"}.
 Look carefully at the photo. In 3-5 short sentences: say one thing they did well, spot any mistake
 (wrong wiring, missing part, loose connection), and tell them exactly how to fix it. Be encouraging. No markdown.`;
     const answer = await aiText(prompt, payload.image, payload.mimeType);
