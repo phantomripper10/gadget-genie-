@@ -226,7 +226,7 @@ function buildViewer(container, gadget) {
 
   if (typeof THREE === "undefined") {
     // offline / CDN blocked — blueprint already covers the visuals
-    container.innerHTML = `<div class="viewer-fallback">📐 3D preview needs internet for the first load.<br>Your blueprint below shows every angle!</div>`;
+    container.innerHTML = `<div class="viewer-fallback">The 3D preview needs internet for its first load.<br>Your blueprint below shows every angle.</div>`;
     return;
   }
 

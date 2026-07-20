@@ -3,145 +3,132 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GadgetGenie — Dream it. Build it.</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <title>GadgetGenie — Kids design and build real gadgets</title>
+  <meta name="description" content="GadgetGenie turns a kid's idea into a buildable gadget: a 3D model, an engineering blueprint, a priced parts list, wiring, Arduino code, and step-by-step guidance that teaches the science." />
+  <meta name="theme-color" content="#1266C2" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="GadgetGenie — Kids design and build real gadgets" />
+  <meta property="og:description" content="Type an idea. Get a 3D model, blueprint, parts list, wiring, and code — with a mentor that teaches the science while you build." />
+  <meta property="og:image" content="/og.png" />
+  <meta property="og:url" content="https://gadget-genie.onrender.com" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <header class="topbar">
-    <div class="logo" onclick="goHome()">⚡ Gadget<span>Genie</span></div>
-    <div class="topbar-right">
-      <span id="aiStatus" class="ai-pill">…</span>
-      <button id="parentBtn" class="btn btn-ghost" onclick="openParentModal()">🛡️<span class="btn-label"> Parent Mode</span></button>
-      <button class="btn btn-home" onclick="goHome()">🏠<span class="btn-label"> Home</span></button>
-    </div>
+    <a class="logo" href="#" onclick="goHome();return false" aria-label="GadgetGenie home">
+      <span class="i logo-mark" data-icon="logo"></span>
+      <span class="logo-word">GadgetGenie</span>
+    </a>
+    <nav class="topbar-right">
+      <span id="aiStatus" class="ai-pill">Checking…</span>
+      <button id="parentBtn" class="btn btn-ghost" onclick="openParentModal()">
+        <span class="i" data-icon="shield"></span>Parent mode</button>
+      <button class="btn btn-secondary" onclick="goHome()">New invention</button>
+    </nav>
   </header>
 
   <!-- ============================== LANDING ============================== -->
   <section id="landing">
     <div class="hero">
-      <div class="hero-badge">⚡ GADGETGENIE — THE FUTURE OF AI BEGINS WITH THE YOUTH</div>
-      <h1>Dream it. <span class="grad">Build it.</span></h1>
-      <p class="hero-sub">Type any gadget you can imagine. Get a 3D model, a real blueprint,
-        the code, every part with prices, and a mentor that teaches you the science —
-        <b>all in under a minute.</b></p>
+      <p class="eyebrow">The future of AI begins with the youth</p>
+      <h1>Turn any idea into a<br />buildable gadget.</h1>
+      <p class="hero-sub">Describe what you want to make. GadgetGenie designs the 3D model,
+        the blueprint, the parts list with prices, the wiring, and the code — then teaches
+        you the science at every step of the build.</p>
 
       <div class="prompt-box">
-        <input id="promptInput" type="text" placeholder="I want to build a lightsaber…" autocomplete="off" />
-        <button id="generateBtn" class="btn btn-primary" onclick="generate()">⚡ Invent it!</button>
+        <span class="i prompt-icon" data-icon="spark"></span>
+        <input id="promptInput" type="text" placeholder="A lightsaber. A robot that draws. A fan for my desk…" autocomplete="off" />
+        <button id="generateBtn" class="btn btn-primary" onclick="generate()">Design it</button>
       </div>
 
-      <div class="chips">
-        <span class="chips-label">Try one:</span>
-        <button class="chip" onclick="quick('lightsaber')">⚔️ Lightsaber</button>
-        <button class="chip" onclick="quick('a robot that draws')">🤖 Drawing Robot</button>
-        <button class="chip" onclick="quick('a night light that turns on in the dark')">🌙 Night Light</button>
+      <div class="chips" role="group" aria-label="Example ideas">
+        <span class="chips-label">Try:</span>
+        <button class="chip" onclick="quick('lightsaber')">Lightsaber</button>
+        <button class="chip" onclick="quick('a robot that draws')">Drawing robot</button>
+        <button class="chip" onclick="quick('a night light that turns on in the dark')">Auto night light</button>
       </div>
 
       <div class="gallery-section">
-        <h2 class="gallery-title">🧰 Or pick a ready-made project</h2>
-        <p class="gallery-sub">Tested builds with full guides — filters also steer the AI when you invent your own!</p>
+        <div class="section-head">
+          <h2>Ready-made projects</h2>
+          <p>Tested builds with full guides. Filters also apply when the AI designs something new.</p>
+        </div>
         <div class="filter-bar">
-          <div class="fgroup" id="catFilter">
-            <button class="fchip active" data-val="all">✨ All</button>
-            <button class="fchip" data-val="practical">🛠️ Practical</button>
-            <button class="fchip" data-val="fun">🎮 Fun Toys</button>
+          <div class="fgroup" id="catFilter" role="group" aria-label="Category">
+            <button class="fchip active" data-val="all"><span class="i" data-icon="grid"></span>All</button>
+            <button class="fchip" data-val="practical"><span class="i" data-icon="wrench"></span>Practical</button>
+            <button class="fchip" data-val="fun"><span class="i" data-icon="controller"></span>Fun</button>
           </div>
-          <div class="fgroup" id="diffFilter">
+          <div class="fgroup" id="diffFilter" role="group" aria-label="Difficulty">
             <button class="fchip active" data-val="any">Any level</button>
-            <button class="fchip" data-val="Beginner">🌱 Beginner</button>
-            <button class="fchip" data-val="Intermediate">⚙️ Intermediate</button>
-            <button class="fchip" data-val="Advanced">🚀 Advanced</button>
+            <button class="fchip" data-val="Beginner">Beginner</button>
+            <button class="fchip" data-val="Intermediate">Intermediate</button>
+            <button class="fchip" data-val="Advanced">Advanced</button>
           </div>
         </div>
         <div class="filter-bar">
-          <div class="fgroup" id="matFilter">
-            <span class="fgroup-label">I have:</span>
+          <div class="fgroup" id="matFilter" role="group" aria-label="Available materials">
+            <span class="fgroup-label">I have</span>
             <button class="fchip active" data-val="any">Anything</button>
-            <button class="fchip" data-val="cardboard">📦 Cardboard</button>
-            <button class="fchip" data-val="plastic">🧴 Bottles/Plastic</button>
-            <button class="fchip" data-val="wood">🪵 Wood</button>
-            <button class="fchip" data-val="metal">🔩 Metal</button>
-            <button class="fchip" data-val="electronics">🔌 Electronics</button>
+            <button class="fchip" data-val="cardboard"><span class="i" data-icon="box"></span>Cardboard</button>
+            <button class="fchip" data-val="plastic"><span class="i" data-icon="bottle"></span>Bottles</button>
+            <button class="fchip" data-val="wood"><span class="i" data-icon="wood"></span>Wood</button>
+            <button class="fchip" data-val="metal"><span class="i" data-icon="nut"></span>Metal</button>
+            <button class="fchip" data-val="electronics"><span class="i" data-icon="chip"></span>Electronics</button>
           </div>
         </div>
-        <p class="filter-note">♻️ Missing a material? Every guide lists free recycled alternatives for its parts.</p>
+        <p class="filter-note">Missing a material? Every guide lists free recycled alternatives for its parts.</p>
         <div id="gallery" class="gallery"></div>
       </div>
 
       <div class="hero-steps">
-        <div class="hstep"><div class="hstep-n">1</div><b>Imagine</b><span>Describe any gadget in your own words</span></div>
-        <div class="hstep"><div class="hstep-n">2</div><b>Blueprint</b><span>3D preview, blueprint, parts list & code — instantly</span></div>
-        <div class="hstep"><div class="hstep-n">3</div><b>Build & learn</b><span>Step-by-step with an AI mentor explaining the STEM</span></div>
-      </div>
-
-      <div class="hero-footnotes">
-        <span>♻️ Suggests recycled & sustainable parts</span>
-        <span>📍 Finds hardware stores near you</span>
-        <span>📴 Guides work offline once downloaded</span>
-        <span>📸 Photo check fixes your mistakes</span>
+        <div class="hstep"><div class="hstep-n">1</div><b>Describe</b><span>Any gadget, in your own words</span></div>
+        <div class="hstep"><div class="hstep-n">2</div><b>Get the plan</b><span>3D model, blueprint, parts, wiring, code</span></div>
+        <div class="hstep"><div class="hstep-n">3</div><b>Build and learn</b><span>Step-by-step, with the science explained</span></div>
       </div>
 
       <div class="parents-section card">
-        <h2>👋 Hey parents — this isn't clutter, it's a curriculum</h2>
+        <div class="section-head">
+          <h2>For parents</h2>
+          <p>Practical builds, supervised where it matters, and less landfill.</p>
+        </div>
         <div class="parents-grid">
           <div class="pcol">
-            <b>🛠️ They build real, useful things</b>
-            <p>Not just toys: a working burglar alarm for their room, a vacuum that actually cleans,
-              a mechanical hand that picks up litter. Practical engineering with a purpose.</p>
+            <span class="i pcol-icon" data-icon="wrench"></span>
+            <b>They build useful things</b>
+            <p>A working burglar alarm, a vacuum that cleans, a mechanical hand that picks
+              up litter. Real engineering with a purpose — not another toy for the shelf.</p>
           </div>
           <div class="pcol">
-            <b>♻️ Cheaper than it looks — and greener</b>
-            <p>Bottles, boxes and scrap metal headed for the landfill become the device instead.
-              Kids learn STEM, creativity <i>and</i> sustainability — waste turns into inventions.</p>
+            <span class="i pcol-icon" data-icon="leaf"></span>
+            <b>Waste becomes the device</b>
+            <p>Bottles, boxes, and scrap headed for the landfill become the build materials.
+              Kids practice STEM and sustainability in the same afternoon.</p>
           </div>
           <div class="pcol">
-            <b>🛡️ You stay in the loop</b>
-            <p>Turn on <b>Parent Mode</b> (adults only): it unlocks Advanced builds and shows a
-              supervision checklist of exactly which steps need a grown-up's hands.</p>
-            <button class="btn btn-small" onclick="openParentModal()">🛡️ Set up Parent Mode</button>
+            <span class="i pcol-icon" data-icon="shield"></span>
+            <b>You stay in the loop</b>
+            <p>Parent mode unlocks advanced builds and lists exactly which steps need
+              an adult's hands: cutting, hot glue, drilling, water.</p>
+            <button class="btn btn-secondary" onclick="openParentModal()">Set up parent mode</button>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============================== PARENT MODE MODAL ============================== -->
-  <div id="parentModal" class="modal-backdrop hidden">
-    <div class="modal">
-      <h3>🛡️ Parent Mode</h3>
-      <div id="parentGate">
-        <p>This area is for adults (18+). To continue, solve:</p>
-        <p class="gate-q"><span id="gateQuestion">…</span></p>
-        <div class="gate-row">
-          <input id="gateAnswer" type="number" placeholder="answer" />
-          <button class="btn btn-primary" onclick="checkParentGate()">Unlock</button>
-        </div>
-        <p id="gateError" class="gate-error hidden">Not quite — try again, grown-up! 🙂</p>
-      </div>
-      <div id="parentPanel" class="hidden">
-        <p class="parent-status">✅ <b>Parent Mode is ON.</b> Advanced builds are unlocked, and every
-          project now shows a <b>supervision checklist</b> of steps that need an adult
-          (cutting, hot glue, drilling, water play).</p>
-        <ul class="parent-list">
-          <li>🚀 Advanced projects (like the Bluetooth Race Car) are now available.</li>
-          <li>🛟 Each build's Safety card lists the exact steps needing your hands.</li>
-          <li>💰 Every project shows total cost up front — no surprise part runs.</li>
-        </ul>
-        <button class="btn" onclick="disableParentMode()">Turn Parent Mode off</button>
-      </div>
-      <button class="modal-close" onclick="closeParentModal()">✕</button>
-    </div>
-  </div>
-
   <!-- ============================== LOADING ============================== -->
-  <div id="loading" class="hidden">
+  <div id="loading" class="hidden" role="status">
     <div class="loader-card">
-      <div class="loader-gear">⚙️</div>
-      <div id="loaderMsg" class="loader-msg">Sketching your blueprint…</div>
+      <div class="spinner" aria-hidden="true"></div>
+      <div id="loaderMsg" class="loader-msg">Reading your idea…</div>
       <div class="loader-bar"><div id="loaderFill"></div></div>
     </div>
   </div>
@@ -150,9 +137,9 @@
   <section id="workshop" class="hidden">
 
     <div class="gadget-head card">
-      <div class="gadget-emoji" id="gEmoji">⚔️</div>
+      <div class="gadget-art" id="gArt"></div>
       <div class="gadget-title">
-        <h2 id="gName">LED Lightsaber</h2>
+        <h2 id="gName">Gadget</h2>
         <p id="gTagline"></p>
         <div class="stat-pills">
           <span class="pill" id="gDifficulty"></span>
@@ -162,47 +149,47 @@
         </div>
       </div>
       <div class="gadget-actions">
-        <button class="btn btn-primary" onclick="downloadSTL()">⬇ STL File</button>
-        <button class="btn" onclick="downloadCode()">⬇ Code</button>
-        <button class="btn" onclick="downloadOfflineGuide()">📴 Offline Guide</button>
-        <button class="btn" onclick="goHome()">🏠 Home</button>
+        <button class="btn btn-primary" onclick="downloadSTL()"><span class="i" data-icon="download"></span>STL file</button>
+        <button class="btn btn-secondary" onclick="downloadCode()"><span class="i" data-icon="code"></span>Code</button>
+        <button class="btn btn-secondary" onclick="downloadOfflineGuide()"><span class="i" data-icon="offline"></span>Offline guide</button>
       </div>
     </div>
 
     <div id="demoBanner" class="demo-banner hidden">
-      🔌 <b>Demo mode</b> — no AI key set, so I matched your idea to my built-in library.
-      Add a <code>GEMINI_API_KEY</code> to invent <i>anything</i>. <span id="demoBannerExtra"></span>
+      <b>Demo mode.</b> No AI key is configured, so this idea was matched to the built-in
+      project library. <span id="demoBannerExtra"></span>
     </div>
 
     <div class="workshop-grid">
       <!-- left column -->
       <div class="col-left">
         <div class="card">
-          <div class="card-head"><span>🧊 3D Model</span><span class="hint">drag to spin · scroll to zoom</span></div>
+          <div class="card-head"><span class="card-title"><span class="i" data-icon="cube"></span>3D model</span>
+            <span class="hint">drag to rotate · scroll to zoom</span></div>
           <div id="viewer3d"></div>
         </div>
         <div class="card">
-          <div class="card-head"><span>📐 Blueprint</span>
-            <button class="btn btn-small" onclick="downloadBlueprint()">⬇ Save</button></div>
+          <div class="card-head"><span class="card-title"><span class="i" data-icon="blueprint"></span>Blueprint</span>
+            <button class="btn btn-secondary btn-small" onclick="downloadBlueprint()">Save SVG</button></div>
           <div id="blueprint"></div>
         </div>
-        <div class="card mentor-card">
-          <div class="card-head"><span>🤖 Ask your Mentor</span></div>
+        <div class="card">
+          <div class="card-head"><span class="card-title"><span class="i" data-icon="robot"></span>Ask your mentor</span></div>
           <div id="mentorLog" class="mentor-log">
-            <div class="mentor-msg">Hi! I'm your build mentor. Ask me anything — like
-              <i>"what does the resistor do?"</i> or <i>"why won't my LED light up?"</i></div>
+            <div class="mentor-msg">Hi, I'm your build mentor. Ask me anything — like
+              “what does the resistor do?” or “why won't my LED light up?”</div>
           </div>
           <div class="mentor-input">
             <input id="mentorInput" type="text" placeholder="Ask a science question…" />
-            <button class="btn btn-primary btn-small" onclick="askMentor()">Ask</button>
+            <button id="askBtn" class="btn btn-primary btn-small" onclick="askMentor()">Ask</button>
           </div>
           <div class="photo-check">
-            <label class="btn btn-small btn-photo">
-              📸 Mentor Check: upload a photo of your build
+            <label class="btn btn-secondary btn-small btn-photo">
+              <span class="i" data-icon="camera"></span>Photo check: upload your build
               <input id="photoInput" type="file" accept="image/*" hidden />
             </label>
             <div id="photoPreviewWrap" class="hidden">
-              <img id="photoPreview" alt="your build" />
+              <img id="photoPreview" alt="Photo of your build" />
             </div>
           </div>
         </div>
@@ -211,49 +198,82 @@
       <!-- right column -->
       <div class="col-right">
         <div class="card">
-          <div class="tabs" id="tabs">
-            <button class="tab active" data-tab="guide">📖 Guide</button>
-            <button class="tab" data-tab="parts">🛒 Parts</button>
-            <button class="tab" data-tab="wiring">🔌 Wiring</button>
-            <button class="tab" data-tab="code">💻 Code</button>
-            <button class="tab" data-tab="how">🧪 How it Works</button>
+          <div class="tabs" id="tabs" role="tablist">
+            <button class="tab active" data-tab="guide" role="tab"><span class="i" data-icon="guide"></span>Guide</button>
+            <button class="tab" data-tab="parts" role="tab"><span class="i" data-icon="cart"></span>Parts</button>
+            <button class="tab" data-tab="wiring" role="tab"><span class="i" data-icon="plug"></span>Wiring</button>
+            <button class="tab" data-tab="code" role="tab"><span class="i" data-icon="code"></span>Code</button>
+            <button class="tab" data-tab="how" role="tab"><span class="i" data-icon="flask"></span>Science</button>
           </div>
           <div id="tabContent" class="tab-content"></div>
         </div>
 
-        <div class="card green-card">
-          <div class="card-head"><span>♻️ Build it greener</span><span class="hint">save money, save the planet</span></div>
+        <div class="card">
+          <div class="card-head"><span class="card-title accent-green"><span class="i" data-icon="leaf"></span>Build it greener</span>
+            <span class="hint">save money, skip the landfill</span></div>
           <div id="sustainability"></div>
         </div>
 
         <div class="card">
-          <div class="card-head"><span>📍 Get the parts</span></div>
+          <div class="card-head"><span class="card-title"><span class="i" data-icon="pin"></span>Get the parts</span></div>
           <div class="stores">
-            <button class="btn" onclick="findNearby('electronics parts store')">🔍 Electronics stores near me</button>
-            <button class="btn" onclick="findNearby('hardware store')">🔨 Hardware stores near me</button>
-            <button class="btn" onclick="findNearby('thrift store')">♻️ Thrift stores (recycled parts!)</button>
+            <button class="btn btn-secondary" onclick="findNearby('electronics parts store')">Electronics stores near me</button>
+            <button class="btn btn-secondary" onclick="findNearby('hardware store')">Hardware stores</button>
+            <button class="btn btn-secondary" onclick="findNearby('thrift store')">Thrift stores</button>
           </div>
-          <p class="stores-note">Opens a map of stores around you — or use the 🛒 buy links in the Parts tab to order online.</p>
+          <p class="stores-note">Opens a map of stores around you. Online buy links are in the Parts tab.</p>
         </div>
 
         <div class="card safety-card">
-          <div class="card-head"><span>🛟 Safety first</span></div>
+          <div class="card-head"><span class="card-title accent-red"><span class="i" data-icon="alert"></span>Safety first</span></div>
           <ul id="safety"></ul>
           <div id="supervision"></div>
         </div>
       </div>
     </div>
-
-    <div class="workshop-footer">
-      <button class="btn btn-primary" onclick="goHome()">🏠 Back to Home</button>
-    </div>
   </section>
 
-  <footer>Built for young inventors · GadgetGenie turns imagination into engineering ⚡</footer>
+  <!-- ============================== PARENT MODE MODAL ============================== -->
+  <div id="parentModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="parentTitle">
+    <div class="modal">
+      <h3 id="parentTitle"><span class="i" data-icon="shield"></span>Parent mode</h3>
+      <div id="parentGate">
+        <p>This area is for adults. To continue, solve:</p>
+        <p class="gate-q"><span id="gateQuestion">…</span></p>
+        <div class="gate-row">
+          <input id="gateAnswer" type="number" placeholder="Answer" aria-label="Answer" />
+          <button class="btn btn-primary" onclick="checkParentGate()">Unlock</button>
+        </div>
+        <p id="gateError" class="gate-error hidden">Not quite — try again.</p>
+      </div>
+      <div id="parentPanel" class="hidden">
+        <p class="parent-status"><b>Parent mode is on.</b> Advanced builds are unlocked, and each
+          project's Safety card now lists the steps that need an adult.</p>
+        <ul class="parent-list">
+          <li>Advanced projects (like the Bluetooth race car) are available.</li>
+          <li>Supervision checklist flags cutting, hot glue, drilling, and water steps.</li>
+          <li>Every project shows its total cost up front.</li>
+        </ul>
+        <button class="btn btn-secondary" onclick="disableParentMode()">Turn parent mode off</button>
+      </div>
+      <button class="modal-close" onclick="closeParentModal()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-brand"><span class="i" data-icon="logo"></span>GadgetGenie</span>
+      <span class="footer-copy">Built by a young inventor, for young inventors.</span>
+      <a class="footer-link" href="https://github.com/phantomripper10/gadget-genie-" target="_blank" rel="noopener">
+        <span class="i" data-icon="github"></span>Source on GitHub</a>
+    </div>
+  </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="icons.js"></script>
   <script src="gadgets.js"></script>
   <script src="engine.js"></script>
   <script src="app.js"></script>
+  <script>mountIcons();</script>
 </body>
 </html>
