@@ -1043,8 +1043,7 @@ function childModeInfo() {
   return { childMode: (currentUser && currentUser.kind === "child") || s.age === "6-8", age: (currentUser && currentUser.age) || s.age || "" };
 }
 
-// ---------- Genie avatar — the robot friend who talks to you ----------
-let genieVoice = localStorage.getItem("gg_voice") === "1";
+// ---------- Genie avatar — the cartoon robot who "talks" to you via speech bubbles ----------
 let genieHideTimer = null;
 
 const GENIE_LINES = {
@@ -1080,31 +1079,23 @@ function genieSay(text, autoHide) {
   if (!bubble) return;
   document.getElementById("genieText").textContent = text;
   bubble.classList.remove("hidden");
+  // cartoon "talking" wiggle on the avatar — purely visual, no audio
+  const avatar = document.getElementById("genieAvatarBtn");
+  if (avatar) {
+    avatar.classList.remove("talking"); void avatar.offsetWidth; avatar.classList.add("talking");
+    setTimeout(() => avatar.classList.remove("talking"), 600); // let the idle bob resume
+  }
   clearTimeout(genieHideTimer);
   if (autoHide) genieHideTimer = setTimeout(() => bubble.classList.add("hidden"), 9000);
-  if (genieVoice && "speechSynthesis" in window) {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.02; u.pitch = 1.25; // bright, friendly robot voice
-    speechSynthesis.speak(u);
-  }
 }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function toggleGenieBubble() {
   const bubble = document.getElementById("genieBubble");
   if (bubble.classList.contains("hidden")) genieSay(pick(GENIE_LINES.tips), false);
-  else { bubble.classList.add("hidden"); speechSynthesis?.cancel(); }
+  else bubble.classList.add("hidden");
 }
 function genieTip() { genieSay(pick(GENIE_LINES.tips), false); }
-
-function toggleGenieVoice() {
-  genieVoice = !genieVoice;
-  localStorage.setItem("gg_voice", genieVoice ? "1" : "0");
-  document.getElementById("genieVoiceBtn").textContent = "Voice: " + (genieVoice ? "on" : "off");
-  if (genieVoice) genieSay("Now I can talk out loud! Hi, I'm Genie!", true);
-  else speechSynthesis?.cancel();
-}
 
 function genieCelebrate() {
   // confetti burst for badge moments
@@ -1129,7 +1120,6 @@ function genieBoot() {
   if (avatar) avatar.innerHTML = GENIE_MASCOT;
   if (hero) hero.innerHTML = GENIE_MASCOT;
   document.querySelectorAll("[data-mascot]").forEach((e) => (e.innerHTML = GENIE_MASCOT)); // chat avatars
-  document.getElementById("genieVoiceBtn").textContent = "Voice: " + (genieVoice ? "on" : "off");
   setTimeout(() => genieSay(pick(GENIE_LINES.welcome), true), 1200);
 }
 

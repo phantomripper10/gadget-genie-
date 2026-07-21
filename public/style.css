@@ -686,8 +686,25 @@ tr.part-done .sust-alt, tr.part-done .cost { color: var(--muted); }
 .genie-avatar:hover { transform: scale(1.06); border-color: var(--blue); }
 .genie-avatar svg { width: 100%; height: auto; }
 .genie-bubble {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 16px 16px 4px 16px;
+  position: relative;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
   box-shadow: var(--shadow); padding: 16px; width: min(280px, 78vw);
+  animation: bubble-pop 180ms ease-out;
+}
+/* cartoon speech-bubble tail pointing down at the avatar */
+.genie-bubble::after {
+  content: ""; position: absolute; right: 24px; bottom: -9px;
+  width: 16px; height: 16px; background: var(--surface);
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+@keyframes bubble-pop { from { transform: translateY(6px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.genie-avatar.talking { animation: genie-talk 600ms ease-in-out; }
+@keyframes genie-talk {
+  0%, 100% { transform: rotate(0) scale(1); }
+  25% { transform: rotate(-4deg) scale(1.05); }
+  50% { transform: rotate(3deg) scale(1.04); }
+  75% { transform: rotate(-2deg) scale(1.05); }
 }
 .genie-bubble p { font-size: 13.5px; line-height: 1.5; margin-bottom: 8px; }
 .genie-actions { display: flex; gap: 8px; flex-wrap: wrap; }
