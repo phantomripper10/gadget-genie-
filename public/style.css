@@ -412,11 +412,24 @@ pre.code {
 
 /* ---------------------------------------------------------------- mentor */
 .mentor-log { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.mentor-row { display: flex; align-items: flex-end; gap: 8px; max-width: 94%; }
+.mentor-row.user { margin-left: auto; justify-content: flex-end; }
+.mentor-av {
+  width: 32px; height: 32px; flex: none; border-radius: 50%;
+  background: var(--blue-50); border: 1px solid var(--line); overflow: hidden;
+  display: grid; place-items: center; align-self: flex-start;
+}
+.mentor-av svg { width: 132%; height: auto; margin-top: 4px; } /* frame the smiling face */
+.mentor-head-av {
+  width: 26px; height: 26px; flex: none; border-radius: 50%;
+  background: var(--blue-50); overflow: hidden; display: grid; place-items: center;
+}
+.mentor-head-av svg { width: 130%; height: auto; margin-top: 3px; }
 .mentor-msg {
   background: var(--blue-50); color: var(--ink); padding: 8px 12px;
-  border-radius: 4px 12px 12px 12px; font-size: 13.5px; max-width: 92%;
+  border-radius: 4px 12px 12px 12px; font-size: 13.5px;
 }
-.mentor-msg.user { align-self: flex-end; background: var(--blue); color: #fff; border-radius: 12px 4px 12px 12px; }
+.mentor-msg.user { background: var(--blue); color: #fff; border-radius: 12px 12px 4px 12px; }
 .mentor-msg.thinking { color: var(--muted); font-style: italic; background: var(--paper); }
 .mentor-input { display: flex; gap: 8px; }
 .mentor-input input {

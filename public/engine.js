@@ -234,15 +234,28 @@ function buildViewer(container, gadget) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-  const key = new THREE.DirectionalLight(0xffffff, 0.9);
-  key.position.set(5, 10, 7);
+  // soft studio lighting: sky/ground fill + a warm key that casts a shadow + cool rim
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xdfd8c8, 0.85));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+  const key = new THREE.DirectionalLight(0xffffff, 1.1);
+  key.position.set(6, 12, 8);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.radius = 4;
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x88bbff, 0.35);
-  rim.position.set(-6, -4, -8);
+  const fill = new THREE.DirectionalLight(0xbcd4ff, 0.35);
+  fill.position.set(-8, 2, 4);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xa9c6ff, 0.5);
+  rim.position.set(-4, 6, -10);
   scene.add(rim);
 
   const group = new THREE.Group();
@@ -253,14 +266,16 @@ function buildViewer(container, gadget) {
     else geo = new THREE.SphereGeometry(part.size[0], 24, 18);
     const mat = new THREE.MeshStandardMaterial({
       color: part.color || "#999999",
-      roughness: part.glow ? 0.25 : 0.55,
-      metalness: part.glow ? 0.1 : 0.35,
+      roughness: part.glow ? 0.3 : 0.5,
+      metalness: part.glow ? 0.0 : 0.12, // toy-plastic look, not chrome
       emissive: part.glow ? new THREE.Color(part.color) : new THREE.Color(0x000000),
       emissiveIntensity: part.glow ? 0.9 : 0,
       transparent: !!part.glow,
       opacity: part.glow ? 0.92 : 1,
     });
     const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = !part.glow;
+    mesh.receiveShadow = !part.glow;
     const rot = part.rot || [0, 0, 0];
     mesh.rotation.set(deg2rad(rot[0]), deg2rad(rot[1]), deg2rad(rot[2]));
     mesh.position.set(...(part.pos || [0, 0, 0]));
@@ -274,11 +289,27 @@ function buildViewer(container, gadget) {
   scene.add(pivot);
 
   const radius = Math.hypot(...b.size) / 2 || 10;
-  const grid = new THREE.GridHelper(radius * 3, 14, 0xbccbe0, 0xdde6f2);
-  grid.position.y = -b.size[1] / 2 - 1;
+  const floorY = -b.size[1] / 2 - 0.4;
+
+  // invisible floor that only catches the shadow — grounds the model realistically
+  const floorMat = new THREE.ShadowMaterial({ opacity: 0.22 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(radius * 8, radius * 8), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = floorY;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  key.shadow.camera.left = -radius * 2; key.shadow.camera.right = radius * 2;
+  key.shadow.camera.top = radius * 2; key.shadow.camera.bottom = -radius * 2;
+  key.shadow.camera.near = 0.5; key.shadow.camera.far = radius * 30;
+  key.target = pivot;
+
+  const grid = new THREE.GridHelper(radius * 4, 20, 0xd7cfbc, 0xe6dfce);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.5;
+  grid.position.y = floorY;
   scene.add(grid);
 
-  const camera = new THREE.PerspectiveCamera(42, w / h, 0.1, radius * 20);
+  const camera = new THREE.PerspectiveCamera(42, w / h, 0.1, radius * 40);
   let dist = radius * 2.6;
   camera.position.set(0, radius * 0.35, dist);
   camera.lookAt(0, 0, 0);

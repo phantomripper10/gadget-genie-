@@ -25,8 +25,11 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const AZURE_URL = process.env.AZURE_OPENAI_URL || "";
 const AZURE_KEY = process.env.AZURE_OPENAI_KEY || "";
 const AZURE_MODEL = process.env.AZURE_OPENAI_MODEL || "azure-openai";
-const AI_PROVIDER = AZURE_URL && AZURE_KEY ? "azure" : GEMINI_KEY ? "gemini" : "";
-const AI_MODEL_NAME = AI_PROVIDER === "azure" ? AZURE_MODEL : AI_PROVIDER === "gemini" ? GEMINI_MODEL : "demo library";
+// Prefer Gemini when its key is present: it produces much better 3D model layouts
+// than the small azure nano model, and its vision handles photo-check. Falls back
+// to Azure, then to the built-in demo library.
+const AI_PROVIDER = GEMINI_KEY ? "gemini" : (AZURE_URL && AZURE_KEY ? "azure" : "");
+const AI_MODEL_NAME = AI_PROVIDER === "gemini" ? GEMINI_MODEL : AI_PROVIDER === "azure" ? AZURE_MODEL : "demo library";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -328,7 +331,7 @@ Return ONLY valid JSON (no markdown fences) with this exact shape:
   "ageRange": "e.g. 8-14",
   "model": { "units": "cm", "parts": [
       { "shape": "cylinder"|"box"|"sphere", "name": "part name",
-        "size": [/* cylinder:[radius,height], box:[w,h,d], sphere:[radius] */],
+        "size": [/* cylinder:[radius,height] with the tube along Y, box:[w,h,d], sphere:[radius] */],
         "pos": [x,y,z], "rot": [rxDeg,ryDeg,rzDeg], "color": "#hex", "glow": false }
   ]},
   "parts": [ { "item": "name", "qty": "1", "cost": 3.5, "buy": "search terms for buying", "sustainable": "free/recycled alternative or null" } ],
@@ -340,8 +343,18 @@ Return ONLY valid JSON (no markdown fences) with this exact shape:
   "sustainability": [ { "instead": "store part", "use": "recycled alternative", "why": "impact" } ],
   "safety": ["short safety rules"]
 }
-Rules: the "model" must build a recognizable 3D toy-like version of the gadget out of 4-12 primitives,
-centered near the origin, sized in cm, y = up. All costs are realistic USD numbers.
+3D MODEL RULES (this is important — make it clearly look like the real object, not a blob):
+- Use 9 to 16 primitives so the shape reads as the real thing. Too few looks like junk.
+- First picture the real object's proportions, then rebuild its silhouette: a car is long and low on 4 wheels; a lamp is a wide base + thin pole + shade on top; a fan is a round bladed disc on a stand; a hand has a palm + 5 separate fingers.
+- y is UP. Sit the object ON the ground: the lowest primitive's bottom should be near y=0. Nothing floats unless it truly floats (a lightsaber blade, a drone).
+- Be symmetric where the real object is: mirror left/right parts to matching +x and -x positions (e.g. two eyes, four wheels, a row of fingers) so it doesn't look lopsided.
+- Parts must TOUCH and overlap into one connected object — do not scatter pieces with gaps between them.
+- Use several DIFFERENT sensible colors: a grey/metal body, black wheels or tyres, a coloured button, a clear lens. Never make the whole model one flat color.
+- Add small detail parts that sell the look: buttons, knobs, wheels, a lens, an antenna, feet.
+- cylinders are drawn with their length along the local Y axis — rotate them (rot) to lay them sideways (e.g. a wheel is a short wide cylinder rotated 90° about X or Z).
+- Use "glow": true ONLY for parts that really emit light (LEDs, screens, glowing blades).
+- Keep sizes realistic for a desk-sized build, in cm.
+All costs are realistic USD numbers.
 Everything must be safe and buildable by a kid with adult supervision: low-voltage electronics only
 (batteries, LEDs, small DC motors, Arduino). Never include mains power, blades, projectiles,
 chemicals, heat, or anything dangerous — if asked for something unsafe, redesign it as a safe

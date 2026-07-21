@@ -707,12 +707,22 @@ const OFFLINE_MENTOR = [
 
 function mentorAppend(text, cls) {
   const log = document.getElementById("mentorLog");
+  const isUser = !!(cls && cls.includes("user"));
+  const row = document.createElement("div");
+  row.className = "mentor-row" + (isUser ? " user" : "");
+  if (!isUser) { // Genie's messages get his face, like he's speaking to you
+    const av = document.createElement("div");
+    av.className = "mentor-av";
+    av.innerHTML = GENIE_MASCOT;
+    row.appendChild(av);
+  }
   const div = document.createElement("div");
   div.className = "mentor-msg" + (cls ? " " + cls : "");
   div.textContent = text;
-  log.appendChild(div);
+  row.appendChild(div);
+  log.appendChild(row);
   log.scrollTop = log.scrollHeight;
-  return div;
+  return row; // callers remove the whole row (avatar + bubble)
 }
 
 async function askMentor() {
@@ -1118,6 +1128,7 @@ function genieBoot() {
   const hero = document.getElementById("heroMascot");
   if (avatar) avatar.innerHTML = GENIE_MASCOT;
   if (hero) hero.innerHTML = GENIE_MASCOT;
+  document.querySelectorAll("[data-mascot]").forEach((e) => (e.innerHTML = GENIE_MASCOT)); // chat avatars
   document.getElementById("genieVoiceBtn").textContent = "Voice: " + (genieVoice ? "on" : "off");
   setTimeout(() => genieSay(pick(GENIE_LINES.welcome), true), 1200);
 }
